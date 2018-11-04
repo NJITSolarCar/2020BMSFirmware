@@ -17,6 +17,9 @@
 
 #include <stdint.h>
 
+// Asserts that the BMS is in a ready state for operation
+void sys_init();
+
 // Peripheral Units
 const uint32_t SYSCTL_PERIPHS[] =
 {
@@ -40,6 +43,13 @@ const uint32_t SYSCTL_PERIPHS[] =
      SYSCTL_PERIPH_UART4
 };
 
+/** System Settings */
+
+// Clock settings, configured for 80 MHz. See datasheet page 208 for divider reference
+#define MCU_XTAL                SYSCTL_XTAL_8MHZ
+#define MCU_VCO                 SYSCTL_CFG_VCO_480
+#define MCU_PLL_DIV             SYSCTL_SYSDIV_2_5
+#define MCU_ACTIVE_FREQ         80000
 
 
 /** General Purpose pins */
