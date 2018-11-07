@@ -112,6 +112,22 @@ void configADC()
 
 
 
+void configGPIO() {
+    // Configure each pin's direction
+    GPIOPinTypeGPIOInput(BQFAULT_PORT, BQFAULT_PIN);
+    GPIOPinTypeGPIOInput(USERSWITCH_PORT, USERSWITCH_PIN);
+
+    GPIOPinTypeGPIOOutput(CANSTB_PORT, CANSTB_PIN);
+    GPIOPinTypeGPIOOutput(DEBUGLED1_PORT, DEBUGLED1_PIN);
+    GPIOPinTypeGPIOOutput(DEBUGLED2_PORT, DEBUGLED2_PIN);
+
+    // Set interrupt directions
+    GPIOIntTypeSet(BQFAULT_PORT, BQFAULT_PIN, BQFAULT_INT_DIR);
+    GPIOIntTypeSet(USERSWITCH_PORT, USERSWITCH_PIN, USERSWITCH_INT_DIR);
+}
+
+
+
 void sys_init()
 {
     // Set the clock to active operation
@@ -128,6 +144,7 @@ void sys_init()
 
     setPinConfigurations();
     configADC();
+    configGPIO();
 }
 
 

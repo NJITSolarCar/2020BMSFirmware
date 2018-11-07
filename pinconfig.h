@@ -55,6 +55,7 @@
 // BQ module fault
 #define BQFAULT_PORT            GPIO_PORTC_BASE
 #define BQFAULT_PIN             GPIO_PIN_6
+#define BQFAULT_INT_LEVEL       GPIO_RISING_EDGE
 
 // CAN interface STB
 #define CANSTB_PORT             GPIO_PORTB_BASE
@@ -63,6 +64,7 @@
 // User Switch
 #define USERSWITCH_PORT         GPIO_PORTB_BASE
 #define USERSWITCH_PIN          GPIO_PIN_3
+#define USERSWITCH_INT_LEVEL    GPIO_FALLING_EDGE
 
 // Debug LEDs
 #define DEBUGLED1_PORT          GPIO_PORTD_BASE
