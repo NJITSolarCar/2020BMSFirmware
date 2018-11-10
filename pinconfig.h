@@ -17,29 +17,6 @@
 
 #include <stdint.h>
 
-// Peripheral Units
-const uint32_t SYSCTL_PERIPHS[] =
-{
-     SYSCTL_PERIPH_ADC0,
-     SYSCTL_PERIPH_ADC1,
-     SYSCTL_PERIPH_CAN0,
-     SYSCTL_PERIPH_GPIOA,
-     SYSCTL_PERIPH_GPIOB,
-     SYSCTL_PERIPH_GPIOC,
-     SYSCTL_PERIPH_GPIOD,
-     SYSCTL_PERIPH_GPIOE,
-     SYSCTL_PERIPH_GPIOF,
-     SYSCTL_PERIPH_GPIOG,
-     SYSCTL_PERIPH_I2C0,
-     SYSCTL_PERIPH_SSI0,
-     SYSCTL_PERIPH_SSI1,
-     SYSCTL_PERIPH_TIMER0,
-     SYSCTL_PERIPH_TIMER1,
-     SYSCTL_PERIPH_UART0,
-     SYSCTL_PERIPH_UART2,
-     SYSCTL_PERIPH_UART4
-};
-
 
 
 /** General Purpose pins */
@@ -54,30 +31,26 @@ const uint32_t SYSCTL_PERIPHS[] =
 #define PWM2_PIN                GPIO_PIN_7
 #define PWM2_PINMAP             GPIO_PB7_T0CCP1
 
-// General Timer PWM pin 3
-#define PWM3_PORT               GPIO_PORTF_BASE
-#define PWM3_PIN                GPIO_PIN_4
-#define PWM3_PINMAP             GPIO_PF4_T2CCP0
-
 // General GPIO 1
 #define GIO1_PORT               GPIO_PORTG_BASE
 #define GIO1_PIN                GPIO_PIN_0
 
 // General GPIO 2
-#define GIO2_PORT               GPIO_PORTG_BASE
-#define GIO2_PIN                GPIO_PIN_1
-
-// General GPIO 3
-#define GIO3_PORT               GPIO_PORTG_BASE
-#define GIO3_PIN                GPIO_PIN_2
+#define GIO2_PORT               GPIO_PORTD_BASE
+#define GIO2_PIN                GPIO_PIN_7
 
 
 
 /* Digital I/O lines */
 
 // BQ module fault
-#define BQFAULT_PORT            GPIO_PORTC_BASE
-#define BQFAULT_PIN             GPIO_PIN_6
+#define BQFAULT_PORT            GPIO_PORTF_BASE
+#define BQFAULT_PIN             GPIO_PIN_4
+#define BQFAULT_INT_LEVEL       GPIO_RISING_EDGE
+
+// BQ wakeup
+#define BQWAKE_PORT             GPIO_PORTC_BASE
+#define BQWAKE_PIN              GPIO_PIN_6
 
 // CAN interface STB
 #define CANSTB_PORT             GPIO_PORTB_BASE
@@ -85,7 +58,8 @@ const uint32_t SYSCTL_PERIPHS[] =
 
 // User Switch
 #define USERSWITCH_PORT         GPIO_PORTB_BASE
-#define USERSWITCH_PIN          GPIO_PIN_3
+#define USERSWITCH_PIN          GPIO_PIN_5
+#define USERSWITCH_INT_LEVEL    GPIO_FALLING_EDGE
 
 // Debug LEDs
 #define DEBUGLED1_PORT          GPIO_PORTD_BASE
@@ -93,6 +67,31 @@ const uint32_t SYSCTL_PERIPHS[] =
 
 #define DEBUGLED2_PORT          GPIO_PORTC_BASE
 #define DEBUGLED2_PIN           GPIO_PIN_7
+
+// Relay controls
+#define CHARGEMAIN_PORT         GPIO_PORTB_BASE
+#define CHARGEMAIN_PIN          GPIO_PIN_3
+
+#define CHARGEAUX_PORT          GPIO_PORTB_BASE
+#define CHARGEAUX_PIN           GPIO_PIN_2
+
+#define DISCHARGEMAIN_PORT      GPIO_PORTB_BASE
+#define DISCHARGEMAIN_PIN       GPIO_PIN_1
+
+#define DISCHARGEAUX_PORT       GPIO_PORTB_BASE
+#define DISCHARGEAUX_PIN        GPIO_PIN_0
+
+#define BATTNEGMAIN_PORT        GPIO_PORTD_BASE
+#define BATTNEGMAIN_PIN         GPIO_PIN_5
+
+#define BATTNEGAUX_PORT         GPIO_PORTD_BASE
+#define BATTNEGAUX_PIN          GPIO_PIN_4
+
+#define PRECHARGEMAIN_PORT      GPIO_PORTG_BASE
+#define PRECHARGEMAIN_PIN       GPIO_PIN_1
+
+#define PRECHARGEAUX_PORT       GPIO_PORTG_BASE
+#define PRECHARGEAUX_PIN        GPIO_PIN_2
 
 
 
@@ -137,6 +136,10 @@ const uint32_t SYSCTL_PERIPHS[] =
 #define THERM3_PORT             GPIO_PORTD_BASE
 #define THERM3_PIN              GPIO_PIN_0
 #define THERM3_CHANNEL          ADC_CTL_CH7
+
+// ADC timer settings
+#define THERMPV_TIMER           TIMER5_BASE
+#define THERMPV_TIMERCFG        TIMER_CFG_PERIODIC
 
 
 
