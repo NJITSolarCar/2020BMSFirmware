@@ -145,6 +145,8 @@ void sys_init()
     setPinConfigurations();
     configADC();
     configGPIO();
+    FPUEnable();
+    FPUStackingDisable();
 }
 
 
