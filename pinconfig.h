@@ -9,13 +9,13 @@
 #ifndef PINCONFIG_H_
 #define PINCONFIG_H_
 
+#include <stdint.h>
+
 #include <driverlib/gpio.h>
 #include <driverlib/pin_map.h>
-#include <driverlib/adc>
+#include <driverlib/adc.h>
 
 #include <inc/hw_memmap.h>
-
-#include <stdint.h>
 
 
 
