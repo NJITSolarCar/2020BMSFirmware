@@ -25,14 +25,19 @@
 #define BQ_ADDR_SIZE_8          0x00 // 8-bit Register Address
 #define BQ_ADDR_SIZE_16         0x08 // 16-bit Register Address
 
-#define BQ_DATA_SIZE_0          0x00 // 0 byte packet
-#define BQ_DATA_SIZE_1          0x01 // 1 byte packet
-#define BQ_DATA_SIZE_2          0x02 // 2 byte packet
-#define BQ_DATA_SIZE_3          0x03 // 3 byte packet
-#define BQ_DATA_SIZE_4          0x04 // 4 byte packet
-#define BQ_DATA_SIZE_5          0x05 // 5 byte packet
-#define BQ_DATA_SIZE_6          0x06 // 6 byte packet
+// All the other frame lengths but this one just use
+// the same number (e.g a length of 1 is 1, length of 2 is 2, etc.),
+// So explicitly specify this one
 #define BQ_DATA_SIZE_8          0x07 // 8 byte packet
+
+// Addresses of commonly used registers. If you need to write to it and it
+// isn't listed here, add it!
+#define BQ_REG_CMD              0x02
+
+
+// Command Register Commands
+#define BQ_CMD_SAMPLE           0x00
+#define BQ_CMD_READ             0x20
 
 
 // Baud rates to use for UART. The BQ76 defaults to BQBAUD_INIT, and that
@@ -40,14 +45,29 @@
 #define BQ_BAUD_INIT            250000
 #define BQ_BAUD_RUNNING         1000000
 
-// Addresses for the 2 modules
-#define BQ_MOD0_ADDR            0
-#define BQ_MOD1_ADDR            1
+#define BQ_WRITE_BUF_SIZE       16
+#define BQ_READ_BUF_SIZE        256
+
 
 void bq76_connect();
 uint8_t bq76_faultStat();
+uint8_t bq76_autoAddress();
 uint8_t bq76_enabled();
-uint32_t bq76_write(uint8_t ui8FrameInit, uint8_t ui8Addr, uint8_t *data);
+
+void bq76_write(
+        uint8_t ui8Flags,
+        uint8_t ui8Len,
+        uint8_t ui8Addr,
+        uint8_t *data);
+
+void bq76_writeReg(
+        uint8_t ui8Flags,
+        uint8_t ui8Addr,
+        uint16_t ui16Reg,
+        uint8_t ui8Data);
+
+uint8_t bq76_waitResponse();
+
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 void bq76_readRawCellVolts(uint16_t *pui16buf);
 float bq76_rawCellToVolts(uint16_t ui16CellVal);
