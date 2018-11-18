@@ -12,6 +12,8 @@
 #include <stdint.h>
 
 #define BQ_NUM_MODULES          2
+#define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
+#define BQ_WRITE_RESP_TIMEOUT   2000 // usecs
 
 // Frame initialization byte settings
 #define BQ_FRM_TYPE_RESPONSE    0x00 // Response Frame
@@ -21,8 +23,8 @@
 #define BQ_REQ_TYPE_SGL_NORESP  0x10 // Single Device Write without Response
 #define BQ_REQ_TYPE_GRP_RESP    0x20 // Group Write with Response
 #define BQ_REQ_TYPE_GRP_NORESP  0x30 // Group Write without Response
-#define BQ_REQ_TYPE_BC_RESP     0x00 // Broadcast Write with Response
-#define BQ_REQ_TYPE_BC_NORESP   0x10 // Broadcast Write without Response
+#define BQ_REQ_TYPE_BC_RESP     0x40 // Broadcast Write with Response
+#define BQ_REQ_TYPE_BC_NORESP   0x50 // Broadcast Write without Response
 
 #define BQ_ADDR_SIZE_8          0x00 // 8-bit Register Address
 #define BQ_ADDR_SIZE_16         0x08 // 16-bit Register Address
@@ -78,6 +80,7 @@ void bq76_writeReg(
         uint8_t ui8Data);
 
 uint8_t bq76_waitResponse(uint32_t ui32Timeout);
+void bq76_waitResponse();
 
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 void bq76_readRawCellVolts(uint16_t *pui16buf);

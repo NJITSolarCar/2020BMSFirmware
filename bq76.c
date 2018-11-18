@@ -10,17 +10,20 @@
 #include <driverlib/uart.h>
 #include <driverlib/gpio.h>
 #include <driverlib/debug.h>
+#include <driverlib/timer.h>
 
 
 #include "bq76.h"
 #include "pinconfig.h"
 #include "system.h"
 
-// Read buffer for UART frames
-static uint8_t g_pui8ReadBuf[BQ_READ_BUF_SIZE];
+static uint8_t g_pui8ReadBuf[BQ_READ_BUF_SIZE]; // Read buffer for UART frames
 
-// If true, a command is currently in progress
-static uint8_t g_ui8CmdInProgress = 0;
+static uint32_t g_ui32ReadBufPtr = 0; // Relative pinter to tail of the read buffer
+
+static uint8_t g_ui8CmdInProgress = 0; // If true, a command is currently in progress
+
+static uint8_t g_ui8CmdHasResponse = 0; // If true, the current command expects a response
 
 
 /**
@@ -58,6 +61,42 @@ static uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len) {
 }
 
 
+/**
+ * General interrupt routine for processing interrupts
+ * from the bq76 UART module.
+ */
+void _bq76_uartISR() {
+    uint8_t data;
+
+    // if we make it this far we won't time out
+    TimerDisable(BQ_RECV_TIMER, BQ_RECV_TIMER_PART);
+
+    // Copy data to read buffer
+    while(UARTCharsAvail(BQUART_MODULE) != -1)
+        g_pui8ReadBuf[g_ui32ReadBufPtr++] = UARTCharGet(BQUART_MODULE) & 0xFF;
+
+    // Receive timed out, so we can assume its done
+    if(UARTIntStatus(BQUART_MODULE, 1) & UART_INT_RT) {
+        g_ui8CmdInProgress = 0;
+    }
+}
+
+
+/**
+ * ISR that runs whenever the timeout period on a command expires.
+ * For commands without response, this will happen normally, after
+ * every command, and serves to give the bq76 chips some time to
+ * process the command before receiving a new one. For systems with
+ * response, however, the UART receive ISR should stop the timer, therefore
+ * if this runs after a response command, we have a communication fault.
+ */
+void _bq76_timerISR() {
+    g_ui8CmdHasResponse = 0;
+    if(g_ui8CmdHasResponse)
+        ; // TODO: Assert level 1 fault
+}
+
+
 
 
 /**
@@ -71,8 +110,18 @@ uint32_t bq76_write(
 {
     uint8_t pui8Readbuf[BQ_READ_BUF_SIZE];
     uint16_t ui16Checksum;
-    uint32_t i = 0; // buffer pointer
+    uint32_t i = 0; // write buffer pointer
 
+    // Wait until we're ready to run a command, then reset global flags
+    bq76_waitResponse();
+    g_ui32ReadBufPtr = 0;
+    g_ui8CmdInProgress = 1;
+    g_ui8CmdHasResponse =
+            !(ui8Flags & BQ_REQ_TYPE_SGL_NORESP)    &&
+            !(ui8Flags & BQ_REQ_TYPE_GRP_NORESP)    &&
+            !(ui8Flags & BQ_REQ_TYPE_BC_NORESP);
+
+    // Build write buffer
     if(ui8Flags & BQ_FRM_TYPE_COMMAND) {
 
         // header
@@ -100,6 +149,14 @@ uint32_t bq76_write(
         // write the buffer
         for(int j=0; j<i; j++)
             UARTCharPut(BQUART_MODULE, pui8Readbuf[j]);
+
+        // Load timeout timer
+        uint32_t ui32Timeout = g_ui8CmdHasResponse ?
+                BQ_WRITE_RESP_TIMEOUT :
+                BQ_WRITE_NORESP_TIMEOUT;
+
+        TimerLoadSet(BQ_RECV_TIMER, BQ_RECV_TIMER_PART, ui32Timeout);
+        TimerEnable(BQ_RECV_TIMER, BQ_RECV_TIMER_PART);
     } else {} // TODO: throw a fault, we shouldn't be transmitting without the command flag
 
 }
@@ -127,9 +184,30 @@ void bq76_writeReg(
 }
 
 
-
+/**
+ * Waits until the g_ui8CmdInProgress flag goes low,
+ * or a timeout occurs. The flag should be automatically set
+ * after a command is sent, and reset after either the entire
+ * response is received (if applicable), or a certain amount
+ * of time has elapsed (for no response commands)
+ *
+ * Returns a nonzero value if it timed out waiting for a response,
+ * zero if the flag was cleared.
+ *
+ * NOTE: This will never affect flag or rx buffer state!
+ */
 uint8_t bq76_waitResponse(uint32_t ui32Timeout) {
+    while(g_ui8CmdInProgress) {
+        // TODO: Implement a systick system and provide a callable
+        // function to get usec time, to implement timeout
+    }
+    return 0;
+}
 
+
+
+void bq76_waitResponse() {
+    while(g_ui8CmdInProgress);
 }
 
 
