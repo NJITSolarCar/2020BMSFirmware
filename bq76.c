@@ -14,17 +14,13 @@
 
 #include "bq76.h"
 #include "pinconfig.h"
+#include "system.h"
 
-// write buffer for UART frames
-static uint8_t g_pui8WriteBuf[BQ_WRITE_BUF_SIZE];
+// Read buffer for UART frames
+static uint8_t g_pui8ReadBuf[BQ_READ_BUF_SIZE];
 
-// recieve buffer for uart frames
-static g_pui8Readbuf[BQ_READ_BUF_SIZE];
-
-// If true, the buffer contains a response that is ready to be processed
-static g_ui8HasResponse = 0;
-
-// Function to call for deferred processing. Reset to null after proce
+// If true, a command is currently in progress
+static uint8_t g_ui8CmdInProgress = 0;
 
 
 /**
@@ -73,7 +69,7 @@ uint32_t bq76_write(
         uint8_t ui8Addr,
         uint8_t *pui8Data)
 {
-
+    uint8_t pui8Readbuf[BQ_READ_BUF_SIZE];
     uint16_t ui16Checksum;
     uint32_t i = 0; // buffer pointer
 
@@ -81,7 +77,7 @@ uint32_t bq76_write(
 
         // header
         ui8Flags |= bq76_len2frame(ui8Len);
-        g_pui8WriteBuf[i++] = ui8Flags;
+        pui8Readbuf[i++] = ui8Flags;
 
         // if we aren't broadcasting, we need to have an address byte
         // in the packet, so add it in
@@ -89,21 +85,21 @@ uint32_t bq76_write(
             !(ui8Flags | BQ_REQ_TYPE_BC_RESP)  &&
             !(ui8Flags | BQ_REQ_TYPE_BC_NORESP)
         ) {
-            g_pui8WriteBuf[i++] = ui8Addr;
+            pui8Readbuf[i++] = ui8Addr;
         }
 
         // data
         for(int j=0; j<ui8Len; j++)
-            g_pui8WriteBuf[i++] = pui8Data[j];
+            pui8Readbuf[i++] = pui8Data[j];
 
         // checksum
         ui16Checksum = bq76_checksum(g_pui8WriteBuf, ui8Len);
-        g_pui8WriteBuf[i++] = ui16Checksum >> 8;
-        g_pui8WriteBuf[i++] = ui16Checksum & 0xFF;
+        pui8Readbuf[i++] = ui16Checksum >> 8;
+        pui8Readbuf[i++] = ui16Checksum & 0xFF;
 
         // write the buffer
         for(int j=0; j<i; j++)
-            UARTCharPut(BQUART_MODULE, g_pui8WriteBuf[j]);
+            UARTCharPut(BQUART_MODULE, pui8Readbuf[j]);
     } else {} // TODO: throw a fault, we shouldn't be transmitting without the command flag
 
 }
@@ -132,12 +128,62 @@ void bq76_writeReg(
 
 
 
+uint8_t bq76_waitResponse(uint32_t ui32Timeout) {
+
+}
+
+
+
+
 
 /**
- * Executes the auto addressing sequence to the onboard BQ76 modules
+ * Executes the auto addressing sequence to the onboard BQ76 modules.
+ * Taken from the  BQ76 Software Developer's reference, pg. 2
  */
 uint8_t bq76_autoAddress() {
+    // Fully Enable Differential Interfaces and Select Auto-Addressing Mode
+    uint16_t ui16ComCfgDat =
+            BQ_BAUD_INIT_CODE   |
+            (1 << 7)            |   // UART transmission enable
+            (1 << 6)            |   // high side receiver enable
+            (1 << 5);               // low side transmitter enable
 
+    bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_COMCONFIG,
+            ui16ComCfgDat >> 8);
+
+    bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_COMCONFIG+1,
+            ui16ComCfgDat & 0xFF);
+
+    // Put Devices into Auto-Address Learning Mode
+    bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_DEVCONFIG,
+            1 << 4);
+
+    bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_DEV_CTRL,
+            1 << 3);
+
+    // Assign addresses to each device
+    for(int i=0; i<BQ_NUM_MODULES; i++) {
+        bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_ADDR,
+            i);
+    }
+
+    // Verify that the modules are responding correctly. If any one doesn't respond,
+    // assert a level 1 (non-halting fatal) fault
 }
 
 

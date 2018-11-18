@@ -11,6 +11,8 @@
 #include "system.h"
 #include <stdint.h>
 
+#define BQ_NUM_MODULES          2
+
 // Frame initialization byte settings
 #define BQ_FRM_TYPE_RESPONSE    0x00 // Response Frame
 #define BQ_FRM_TYPE_COMMAND     0x80 // Command Frame
@@ -33,6 +35,10 @@
 // Addresses of commonly used registers. If you need to write to it and it
 // isn't listed here, add it!
 #define BQ_REG_CMD              0x02
+#define BQ_REG_ADDR             0x0A
+#define BQ_REG_DEV_CTRL         0x0C
+#define BQ_REG_DEVCONFIG        0x0E
+#define BQ_REG_COMCONFIG        0x10
 
 
 // Command Register Commands
@@ -43,10 +49,15 @@
 // Baud rates to use for UART. The BQ76 defaults to BQBAUD_INIT, and that
 // is changed to BQBAUD_RUNNING during initialization to boost performance
 #define BQ_BAUD_INIT            250000
-#define BQ_BAUD_RUNNING         1000000
+#define BQ_BAUD_INIT_CODE       (1 << 12)
 
+#define BQ_BAUD_RUNNING         1000000
+#define BQ_BAUD_RUNNING_CODE    (3 << 12)
+
+// Misc. Buffer sizes
 #define BQ_WRITE_BUF_SIZE       16
 #define BQ_READ_BUF_SIZE        256
+
 
 
 void bq76_connect();
@@ -66,7 +77,7 @@ void bq76_writeReg(
         uint16_t ui16Reg,
         uint8_t ui8Data);
 
-uint8_t bq76_waitResponse();
+uint8_t bq76_waitResponse(uint32_t ui32Timeout);
 
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 void bq76_readRawCellVolts(uint16_t *pui16buf);
