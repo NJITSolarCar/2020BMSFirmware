@@ -41,6 +41,7 @@
 #define BQ_REG_DEV_CTRL         0x0C
 #define BQ_REG_DEVCONFIG        0x0E
 #define BQ_REG_COMCONFIG        0x10
+#define BQ_REG_FAULT_SUM        0x52
 
 
 // Command Register Commands
@@ -59,6 +60,7 @@
 // Misc. Buffer sizes
 #define BQ_WRITE_BUF_SIZE       16
 #define BQ_READ_BUF_SIZE        256
+#define BQ_WRITEREG_MAX_MSG     7 // Max data length allowed in bq76_writeReg(...)
 
 
 
@@ -67,22 +69,43 @@ uint8_t bq76_faultStat();
 uint8_t bq76_autoAddress();
 uint8_t bq76_enabled();
 
-void bq76_write(
+uint8_t bq76_write(
         uint8_t ui8Flags,
         uint8_t ui8Len,
         uint8_t ui8Addr,
         uint8_t *data);
 
-void bq76_writeReg(
+uint8_t bq76_writeReg(
+        uint8_t ui8Flags,
+        uint8_t ui8Addr,
+        uint16_t ui16Reg,
+        uint8_t *ui8Data,
+        uint8_t ui8DataLength);
+
+uint8_t bq76_writeReg(
         uint8_t ui8Flags,
         uint8_t ui8Addr,
         uint16_t ui16Reg,
         uint8_t ui8Data);
 
+uint8_t bq76_readRegSingle(
+        uint8_t ui8Addr,
+        uint16_t ui16Reg,
+        uint8_t ui8Len,
+        uint8_t *pui8Response);
+
 uint8_t bq76_waitResponse(uint32_t ui32Timeout);
 void bq76_waitResponse();
 
+uint8_t bq76_parseResponse(uint8_t ui8Start, uint8_t *pui8Len);
+uint8_t bq76_parseMultiple(
+        uint8_t ui8NumResponses,
+        uint8_t *pui8StartPtrs,
+        uint8_t *pui8Lengths,
+        uint8_t *pui8ChecksumGood);
+
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
+
 void bq76_readRawCellVolts(uint16_t *pui16buf);
 float bq76_rawCellToVolts(uint16_t ui16CellVal);
 

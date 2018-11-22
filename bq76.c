@@ -100,7 +100,9 @@ void _bq76_timerISR() {
 
 
 /**
- * Writes a frame of data to the BQ76 bank over UART
+ * Writes a frame of data to the BQ76 bank over UART. At the moment,
+ * this always returns 1, but this may change as more fault handling
+ * capabilities are added.
  */
 uint32_t bq76_write(
         uint8_t ui8Flags,
@@ -158,30 +160,177 @@ uint32_t bq76_write(
         TimerLoadSet(BQ_RECV_TIMER, BQ_RECV_TIMER_PART, ui32Timeout);
         TimerEnable(BQ_RECV_TIMER, BQ_RECV_TIMER_PART);
     } else {} // TODO: throw a fault, we shouldn't be transmitting without the command flag
-
+    return 1; // TODO: add proper return exception handling
 }
 
 
 
 /**
- * Writes a value to a register of one or more bq76 modules
+ * Writes a value to a register of one or more bq76 modules. Can
+ * write a variable number of bytes to the register, from 0 to
+ * BQ_WRITEREG_MAX_MSG. If ui8DataLength is greater than BQ_WRITEREG_MAX_MSG,
+ * then the write will abort and return 0. Otherwise, it will return
+ * whatever bq76_write returns.
  */
-void bq76_writeReg(
+uint8_t bq76_writeReg(
+        uint8_t ui8Flags,
+        uint8_t ui8Addr,
+        uint16_t ui16Reg,
+        uint8_t *ui8Data,
+        uint8_t ui8DataLength)
+{
+    if(ui8DataLength > BQ_WRITEREG_MAX_MSG) {
+        // TODO: Assert proper software fault, this is illegal
+        return;
+    }
+
+    // 2 for register address, the rest for the max possible message length
+    uint8_t pui8WriteBuf[2 + BQ_WRITEREG_MAX_MSG];
+    int i=0;
+
+    if(ui8Flags & BQ_ADDR_SIZE_16)
+        ui8WriteBuf[i++] = ui16Reg >> 8;
+    ui8WriteBuf[i++] = ui16Reg & 0xFF;
+
+    for(int j=0; j<ui8DataLength; j++)
+        pui8WriteBuf[i++] = ui8Data[j];
+
+    return bq76_write(ui8Flags, i, ui8Addr, pui8WriteBuf);
+}
+
+
+
+/**
+ * Utility method to make single byte register writes easier
+ */
+uint8_t bq76_writeReg(
         uint8_t ui8Flags,
         uint8_t ui8Addr,
         uint16_t ui16Reg,
         uint8_t ui8Data)
 {
-    uint8_t data[3];
+    return bq76_writeReg(ui8Flags, ui8Addr, ui16Reg, &ui8Data, 1);
+}
+
+
+
+/**
+ * Extracts information from a raw response stored in the read buffer,
+ * starting with ui8Start
+ * Checks that the response checksum is correct, and that a command with response
+ * is not in progress, and provides the caller with the response
+ * length.
+ * Returns a nonzero value if the checksum is correct and the command
+ * in progress flag is false, zero otherwise. If a zero flag is
+ * returned, there is no guarantee that the calculated length is correct
+ */
+uint8_t bq76_parseResponse(uint8_t ui8Start, uint8_t *pui8Len) {
+
+    // if a response command is in progress, the buffer may be clobbered
+    if(g_ui8CmdInProgress && g_ui8CmdHasResponse)
+        return 0;
+
+    *pui8Len = g_pui8ReadBuf[ui8Start];
+
+    // shift checksum address by 1 to account for the frame init byte
+    uint16_t ui16RespChecksum = g_pui8ReadBuf[*pui8Len + 1 + ui8Start] << 8;
+    ui16RespChecksum |= g_pui8ReadBuf[*pui8Len + 2 + ui8Start];
+
+    // Now compare it with the calculated checksum
+    uint16_t ui16CalcChecksum = bq76_checksum(g_pui8ReadBuf+1+ui8Start, *pui8Len);
+    return ui16CalcChecksum == ui16RespChecksum;
+
+}
+
+
+/**
+ * Parses the response of commands from multiple targets, from either broadcast
+ * or group writes with responses. This will loop over the buffer, extracting the
+ * lengths and start pointers of each block, up to ui8NumResponses.
+ * In addition, it will individually verify the checksum of each response, returning
+ * a 0 for a mismatch. Note that a read fault, and missed checksum,
+ * could possibly shift the data, therefore corrupting all responses
+ * past that point. Returns 0 if a command with response is in progress
+ * or the read buffer is overrun, false otherwise.
+ */
+uint8_t bq76_parseMultiple(
+        uint8_t ui8NumResponses,
+        uint8_t *pui8StartPtrs,
+        uint8_t *pui8Lengths,
+        uint8_t *pui8ChecksumGood)
+{
+    if(g_ui8CmdInProgress && g_ui8CmdHasResponse)
+        return 0;
+
+    int iBufPtr = 0;
+    uint8_t ui8RespOn = 0;
+    while(ui8RespOn < ui8NumResponses &&
+            iBufPtr < BQ_READ_BUF_SIZE)
+    {
+        // Verify the checksum, parse the block, and get its length
+        pui8ChecksumGood[ui8RespOn] =
+                bq76_parseResponse(iBufPtr, pui8Lengths+ui8RespOn);
+
+        pui8StartPtrs[ui8RespOn] = (uint8_t) iBufPtr;
+
+        // Advance the buffer pointer
+        // add 3 bytes on top of data length: 2 for checksum,
+        // 1 for frame initializer
+        iBufPtr += pui8Lengths[ui8RespOn] + 3;
+        ui8RespOn++;
+    }
+
+    // Verify any overruns
+    return iBufPtr < BQ_READ_BUF_SIZE;
+}
+
+
+
+
+/**
+ * Reads the value of a single (variable length) register on a single
+ * bq76 module. Returns a nonzero value if the register was read
+ * with a correct checksum, zero otherwise
+ */
+uint8_t bq76_readRegSingle(
+        uint8_t ui8Addr,
+        uint16_t ui16Reg,
+        uint8_t ui8Len,
+        uint8_t *pui8Response)
+{
+    // Single device write with response, either 8 or 16 bit
+    // register addressing, based on register address size
+    uint8_t ui8Flags =
+            BQ_FRM_TYPE_COMMAND     |
+            BQ_REQ_TYPE_SGL_RESP    |
+            (ui16Reg & 0xFF00) ? BQ_ADDR_SIZE_16 :BQ_ADDR_SIZE_8;
+
+    uint8_t pui8WriteBuf[5];
     int i=0;
 
     if(ui8Flags & BQ_ADDR_SIZE_16)
-        data[i++] = ui16Reg >> 8;
-    data[i++] = ui16Reg & 0xFF;
-    data[i++] = ui8Data;
+        pui8WriteBuf[i++] = ui16Reg >> 8;
+    pui8WriteBuf[i++] = ui16Reg & 0xFF;
+    pui8WriteBuf[i++] = ui8Len-1;
 
-    bq76_write(ui8Flags, i, ui8Addr, data);
+    bq76_write(ui8Flags, i, ui8Addr, pui8WriteBuf);
+
+    uint8_t ui8RespLen;
+    if(!bq76_waitResponse(BQ_WRITE_RESP_TIMEOUT) &&
+        bq76_parseResponse(0, &ui8RespLen))
+    { // got a response, copy it over
+        for(int j=0; j<ui8RespLen; j++)
+            pui8Response[j] = g_pui8ReadBuf[j+1];
+
+        // if the lengths don't match, that's probably an issue,
+        // so flag it in the return
+        return ui8Len == ui8RespLen;
+    }
+
+    return 0; // Bad checksum or response timeout
 }
+
+
 
 
 /**
@@ -206,6 +355,10 @@ uint8_t bq76_waitResponse(uint32_t ui32Timeout) {
 
 
 
+/**
+ * Waits unconditionally on a response to occur. Should be used with caution as
+ * to avoid a lockup
+ */
 void bq76_waitResponse() {
     while(g_ui8CmdInProgress);
 }
@@ -216,9 +369,18 @@ void bq76_waitResponse() {
 
 /**
  * Executes the auto addressing sequence to the onboard BQ76 modules.
- * Taken from the  BQ76 Software Developer's reference, pg. 2
+ * Taken from the  BQ76 Software Developer's reference, pg. 2. This
+ * will assign addresses starting from 0 up to BQ_NUM_MODULES-1, with
+ * 0 being the device on the bottom of the stack (connected to the UART)
+ * and BQ_NUM_MODULES-1 being the device at the top of the stack
+ * (with no high side differential transmitter). In addition, this will
+ * also clear all faults asserted on the modules.
+ *
+ * Returns a nonzero value if addressing was successful, 0 otherwise
  */
 uint8_t bq76_autoAddress() {
+    uint8_t pui8RegData[4]; // temp buffer for multi-byte register writes
+
     // Fully Enable Differential Interfaces and Select Auto-Addressing Mode
     uint16_t ui16ComCfgDat =
             BQ_BAUD_INIT_CODE   |
@@ -230,13 +392,8 @@ uint8_t bq76_autoAddress() {
             BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
             0,
             BQ_REG_COMCONFIG,
-            ui16ComCfgDat >> 8);
-
-    bq76_writeReg(
-            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
-            0,
-            BQ_REG_COMCONFIG+1,
-            ui16ComCfgDat & 0xFF);
+            (uint8_t *) &ui16ComCfgDat,
+            2);
 
     // Put Devices into Auto-Address Learning Mode
     bq76_writeReg(
@@ -262,6 +419,65 @@ uint8_t bq76_autoAddress() {
 
     // Verify that the modules are responding correctly. If any one doesn't respond,
     // assert a level 1 (non-halting fatal) fault
+    uint8_t ui8AddrResponse;
+    for(int i=0; i<BQ_NUM_MODULES; i++) {
+        if(!bq76_readRegSingle( // Read failed
+                i,
+                BQ_REG_ADDR,
+                0,
+                &ui8AddrResponse))
+        {
+            // Failed to address the modules.
+            // TODO: assert a fault
+            return 0
+        }
+    }
+
+    // if we make it here, everything is addressed correctly
+
+    // Turn off the high side of the differential interface on
+    // the device on the top of the stack. See Section 1.2.5 of
+    // the software developer's manual for reference on these data
+    // values
+    pui8RegData[0] = 0x10;
+    pui8RegData[1] = 0x20;
+    bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
+        BQ_NUM_MODULES-1,
+        BQ_REG_COMCONFIG,
+        pui8RegData,
+        2);
+
+    // Turn off the low side of the differential interface on
+    // the device on the bottom of the stack. See Section 1.2.6 of
+    // the software developer's manual for reference on these data
+    // values
+    pui8RegData[0] = 0x10;
+    pui8RegData[1] = 0xC0;
+    bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
+        0,
+        BQ_REG_COMCONFIG,
+        pui8RegData,
+        2);
+
+    // Clear all faults on each device, starting from the top down.
+    // See Section 1.2.6 of the software developer's manual for
+    // reference on these data values
+    pui8RegData[0] = 0xFF;
+    pui8RegData[1] = 0xC0;
+    for(int i=0; i<BQ_NUM_MODULES; i++) {
+        bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
+            i,
+            BQ_REG_FAULT_SUM,
+            pui8RegData,
+            2);
+    }
+
+    // At this point the devices should be ready to go with further
+    // configuration
+    return 1;
 }
 
 
