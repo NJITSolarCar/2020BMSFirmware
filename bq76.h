@@ -10,6 +10,7 @@
 
 #include "system.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 #define BQ_NUM_MODULES          2
 #define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
@@ -48,6 +49,14 @@
 #define BQ_CMD_SAMPLE           0x00
 #define BQ_CMD_READ             0x20
 
+// Oversampling counts
+#define BQ_OVSMP_NONE           0
+#define BQ_OVSMP_2              0
+#define BQ_OVSMP_4              0
+#define BQ_OVSMP_8              0
+#define BQ_OVSMP_16             0
+#define BQ_OVSMP_32             0
+
 
 // Baud rates to use for UART. The BQ76 defaults to BQBAUD_INIT, and that
 // is changed to BQBAUD_RUNNING during initialization to boost performance
@@ -62,27 +71,31 @@
 #define BQ_READ_BUF_SIZE        256
 #define BQ_WRITEREG_MAX_MSG     7 // Max data length allowed in bq76_writeReg(...)
 
-
-
+/*
+ * Initialization
+ */
 void bq76_connect();
 uint8_t bq76_faultStat();
 uint8_t bq76_autoAddress();
-uint8_t bq76_enabled();
 
+
+/*
+ * Low Level Communication
+ */
 uint8_t bq76_write(
         uint8_t ui8Flags,
         uint8_t ui8Len,
         uint8_t ui8Addr,
         uint8_t *data);
 
-uint8_t bq76_writeReg(
+uint8_t bq76_writeRegMultiple(
         uint8_t ui8Flags,
         uint8_t ui8Addr,
         uint16_t ui16Reg,
-        uint8_t *ui8Data,
+        uint8_t *pui8Data,
         uint8_t ui8DataLength);
 
-uint8_t bq76_writeReg(
+uint8_t bq76_writeRegSingle(
         uint8_t ui8Flags,
         uint8_t ui8Addr,
         uint16_t ui16Reg,
@@ -104,9 +117,45 @@ uint8_t bq76_parseMultiple(
         uint8_t *pui8Lengths,
         uint8_t *pui8ChecksumGood);
 
-uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 
-void bq76_readRawCellVolts(uint16_t *pui16buf);
+
+
+/*
+ * High Level Configuration
+ */
+uint8_t bq76_setCellVoltageThreshold(
+        uint8_t ui8ReqType,
+        uint8_t ui8Addr,
+        float fUnder,
+        float fOver);
+
+uint8_t bq76_setOversampling(
+        uint8_t ui8ReqType,
+        uint8_t ui8Addr,
+        bool bCollateSamples,
+        uint8_t ui8Count);
+
+uint8_t bq76_setCellsPopulated(uint8_t ui8Addr, uint16_t ui16CellMask);
+
+
+/*
+ * High Level Functionality
+ */
+uint8_t bq76_StartCellVoltageSample();
+uint8_t bq76_startThermoSample(bool bMuxState);
+
+uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
+uint8_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint8_t ui8BufSize);
+
+uint8_t bq76_readFaultSum()
+
+
+/*
+ * Utility
+ */
 float bq76_rawCellToVolts(uint16_t ui16CellVal);
+uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
+uint8_t bq76_enabled();
+
 
 #endif /* BQ76_H_ */
