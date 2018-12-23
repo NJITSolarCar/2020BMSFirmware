@@ -9,13 +9,13 @@
 #ifndef PINCONFIG_H_
 #define PINCONFIG_H_
 
+#include <stdint.h>
+
 #include <driverlib/gpio.h>
 #include <driverlib/pin_map.h>
-#include <driverlib/adc>
+#include <driverlib/adc.h>
 
 #include <inc/hw_memmap.h>
-
-#include <stdint.h>
 
 
 
@@ -149,6 +149,9 @@
 #define BQUART_MODULE           UART4_BASE
 #define BQUART_RX_PINCONFIG     GPIO_PC4_U4RX
 #define BQUART_TX_PINCONFIG     GPIO_PC5_U4TX
+
+#define BQ_RECV_TIMER           TIMER5_BASE
+#define BQ_RECV_TIMER_PART      TIMER_A
 
 // RS485 Communications
 #define RS485UART_MODULE        UART2_BASE

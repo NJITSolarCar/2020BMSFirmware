@@ -122,8 +122,8 @@ void configGPIO() {
     GPIOPinTypeGPIOOutput(DEBUGLED2_PORT, DEBUGLED2_PIN);
 
     // Set interrupt directions
-    GPIOIntTypeSet(BQFAULT_PORT, BQFAULT_PIN, BQFAULT_INT_DIR);
-    GPIOIntTypeSet(USERSWITCH_PORT, USERSWITCH_PIN, USERSWITCH_INT_DIR);
+    GPIOIntTypeSet(BQFAULT_PORT, BQFAULT_PIN, BQFAULT_INT_LEVEL);
+    GPIOIntTypeSet(USERSWITCH_PORT, USERSWITCH_PIN, USERSWITCH_INT_LEVEL);
 }
 
 
@@ -135,11 +135,11 @@ void sys_init()
             SYSCTL_OSC_MAIN |
             MCU_XTAL |
             MCU_VCO |
-            MCU_PLL_DIV |
+            MCU_PLL_DIV
     );
 
     // Power all the peripherals
-    for(int i=0; i<(sizeof(SYSCTL_PERIPHS) / sizeof(SYSCTL_PERIPHS[0]); i++)
+    for(int i=0; i<(sizeof(SYSCTL_PERIPHS) / sizeof(SYSCTL_PERIPHS[0])); i++)
         SysCtlPeripheralEnable(SYSCTL_PERIPHS[i]);
 
     setPinConfigurations();

@@ -8,6 +8,10 @@
 #ifndef SYSTEM_H_
 #define SYSTEM_H_
 
+#include <stdint.h>
+
+#include <driverlib/sysctl.h>
+
 // Asserts that the BMS is in a ready state for operation
 void sys_init();
 
@@ -61,6 +65,11 @@ const uint32_t SYSCTL_PERIPHS[] =
 #define THERMPV_STEP            0
 #define THERMPV_OVERSAMPLE      64
 #define THERMPV_SAMPLE_FREQ     100
+
+
+
+// BQ76 Settings
+#define CELLCOUNT               24
 
 #endif /* SYSTEM_H_ */
 
