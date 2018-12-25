@@ -1,6 +1,10 @@
 /*
  * system.h
  *
+ * Contains the core application code and loop. All primary initialization and
+ * system control should be performed from here. In addition, the lower level
+ * modules should be used for the majority of HAL operations and computations
+ *
  *  Created on: Nov 4, 2018
  *      Author: Duemmer
  */

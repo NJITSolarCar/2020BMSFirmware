@@ -1,6 +1,12 @@
 /*
  * bq76.h
  *
+ * Contains Drivers for the BQ76PL455A Battery Management IC. The stack of
+ * these forms the core functionality of the BMS, and the connection to the
+ * cells. This interface should expose high level routines for all basic
+ * functionalities, such as reading cell and pack voltages, detecting cell
+ * faults, and passive balancing.
+ *
  *  Created on: Nov 10, 2018
  *      Author: Duemmer
  */
