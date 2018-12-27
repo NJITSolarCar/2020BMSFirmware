@@ -13,5 +13,9 @@
 #define FLAG_H_
 
 
+uint32_t flag_faults(uint32_t ui32Mask);
+
+
+uint32_t flag_setFaults
 
 #endif /* FLAG_H_ */

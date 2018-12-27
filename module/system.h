@@ -71,9 +71,23 @@ const uint32_t SYSCTL_PERIPHS[] =
 #define THERMPV_SAMPLE_FREQ     100
 
 
+/**
+ * This method will be called periodically during operation. This is the "superloop"
+ * Where all of the more advanced calculations, and decisions are made. This
+ * should run fast, and not perform and blocking operations such as I/O if it can be
+ * avoided.
+ */
+void system_tick();
 
-// BQ76 Settings
-#define CELLCOUNT               24
+
+/**
+ * This method will be called by the watchdog on its death. This method should
+ * unconditionally and immediately disable all contactors, balancing, etc. and
+ * put itself in a safe state. From there it should set the proper fault
+ * indicators and record as much data as possible to the SD card. Finally,
+ * it will hang up the system, so it cannot leave this state until a manual reset.
+ */
+void system_abort();
 
 #endif /* SYSTEM_H_ */
 

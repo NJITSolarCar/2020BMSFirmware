@@ -153,7 +153,7 @@ uint8_t bq76_startThermoSample(bool bMuxState);
 uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
 uint8_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint8_t ui8BufSize);
 
-uint8_t bq76_readFaultSum()
+uint8_t bq76_readFaultSum();
 
 
 /*

@@ -10,11 +10,13 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
-"./bq76.obj" \
 "./main.obj" \
-"./system.obj" \
 "./tm4c1230h6pm_startup_ccs.obj" \
+"./tm4c123gh6pm_startup_ccs.obj" \
+"./module/bq76.obj" \
+"./module/system.obj" \
 "../tm4c1230h6pm.cmd" \
+"../tm4c123gh6pm.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibc.a \
 
@@ -26,7 +28,9 @@ RMDIR := RMDIR /S/Q
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir_vars.mk
+-include module/subdir_vars.mk
 -include subdir_rules.mk
+-include module/subdir_rules.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -157,8 +161,8 @@ all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "bq76.obj" "main.obj" "system.obj" "tm4c1230h6pm_startup_ccs.obj" 
-	-$(RM) "bq76.d" "main.d" "system.d" "tm4c1230h6pm_startup_ccs.d" 
+	-$(RM) "main.obj" "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq76.obj" "module\system.obj" 
+	-$(RM) "main.d" "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq76.d" "module\system.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

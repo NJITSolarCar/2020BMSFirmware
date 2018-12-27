@@ -1,1 +1,1 @@
-"./bq76.obj" "./main.obj" "./system.obj" "./tm4c1230h6pm_startup_ccs.obj" "../tm4c1230h6pm.cmd" -llibc.a 
+"./main.obj" "./tm4c1230h6pm_startup_ccs.obj" "./tm4c123gh6pm_startup_ccs.obj" "./module/bq76.obj" "./module/system.obj" "../tm4c1230h6pm.cmd" "../tm4c123gh6pm.cmd" -llibc.a 
