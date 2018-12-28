@@ -14,6 +14,7 @@
 #include "calculation.h"
 #include "types.h"
 #include "flag.h"
+#include "fault.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -251,6 +252,11 @@ void system_tick(uint64_t ui64NumCalls) {
 
 
     ////////////////////// Check for faults //////////////////////
+    // Look through the cells for cell faults
+    for(uint32_t i=0; i<ui32NumCells; i++) {
+        if(g_pfCellVoltages[i] < g_psConfig->fCellUVFaultVoltage)
+            fault_
+    }
 }
 
 

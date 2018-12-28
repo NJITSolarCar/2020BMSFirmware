@@ -15,8 +15,42 @@
 #ifndef FAULT_H_
 #define FAULT_H_
 
-// L1 Faults
-#define FAULT_L1_CUTOFF
+#include <stdint.h>
+
+// If the data for a fault is invalid, it should be set to this
+#define FAULT_NO_DATA               UINT32_MAX
+
+// Fault Codes
+#define FAULT_PACK_OVER_VOLTAGE     0x4000
+#define FAULT_PACK_UNDER_VOLTAGE    0x2000
+#define FAULT_CELL_OVER_VOLTAGE     0x1000
+#define FAULT_CELL_UNDER_VOLTAGE    0x800
+#define FAULT_OVER_DISCHARGE        0x400
+#define FAULT_OVER_CHARGE           0x200
+#define FAULT_OVER_TEMP             0x100
+#define FAULT_UNDER_TEMP            0x80
+#define FAULT_PACK_OPEN_CIRCUIT     0x40
+#define FAULT_IMBALANCED            0x20
+#define FAULT_PACK_SHORT            0x10
+#define FAULT_OVER_CURRENT          0x8
+#define FAULT_COMMUNICATIONS        0x4
+#define FAULT_BQ_CHIP_FAULT         0x2
+#define FAULT_PACK_GENERAL          0x1
+
+
+/**
+ * Registers this fault with the system. ui32Data should be for the
+ * highest level fault
+ */
+void fault_setFault(uint32_t ui32Faults, uint32_t ui32Data);
+
+
+/**
+ * Clears the specified faults from the system. Note that if the highest fault
+ * is cleared, then the fault data flag will be set to FAULT_NO_DATA
+ */
+void fault_clearFaults(uint32_t ui32Mask);
+
 
 /**
  * Sets the operational fault level of the system. This can be any number from 0-5,
