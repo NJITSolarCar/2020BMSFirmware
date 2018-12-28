@@ -7,8 +7,14 @@
 
 #include "pinconfig.h"
 #include "system.h"
+#include "util.h"
+#include "iocontrol.h"
+#include "config.h"
+#include "bq76.h"
+#include "calculation.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <driverlib/gpio.h>
 #include <driverlib/adc.h>
@@ -22,12 +28,14 @@
 
 #include <inc/hw_memmap.h>
 
+
+static tConf *psConfig;
+
 void setPinConfigurations()
 {
     // Set regular peripheral pin configurations
     GPIOPinConfigure(PWM1_PINMAP);
     GPIOPinConfigure(PWM2_PINMAP);
-    GPIOPinConfigure(PWM3_PINMAP);
     GPIOPinConfigure(BQUART_RX_PINCONFIG);
     GPIOPinConfigure(BQUART_TX_PINCONFIG);
     GPIOPinConfigure(RS485UART_RX_PINCONFIG);
@@ -65,8 +73,8 @@ void configADC()
     // Current sense sequence config. Always runs,
     // 64x oversample, asserts an interrupt, and reads each current sensor ADC line
     ADCSequenceConfigure(
-            CURRENTSENSOR_MODULE,
-            CURRENTSENSOR_SEQUENCE,
+            CURRENT_MODULE,
+            CURRENT_SEQUENCE,
             ADC_TRIGGER_ALWAYS,
             1
     );
@@ -148,6 +156,78 @@ void sys_init()
     FPUEnable();
     FPUStackingDisable();
 }
+
+
+
+static uint64_t g_ui64SysTickLastCall = 0;
+void system_tick(uint64_t ui64NumCalls) {
+
+    // Get timing intervals
+    uint64_t ui64Now = util_usecs();
+    uint64_t ui64dt = ui64Now - g_ui64SysTickLastCall;
+    g_ui64SysTickLastCall = ui64Now;
+
+
+    ////////////////////// Variables //////////////////////
+    // Raw current sensor readings
+    uint32_t ui32C1p;
+    uint32_t ui32C1n;
+    uint32_t ui32C2p;
+    uint32_t ui32C2n;
+
+    // Auxiliary adc readings
+    uint32_t ui32PackVolts;
+    uint32_t ui32Therm1;
+    uint32_t ui32Therm2;
+    uint32_t ui32Therm3;
+
+    // Intermediate cell voltage readings
+    uint32_t ui32NumCells = config_totalNumcells(psConfig);
+    uint16_t pui16CellSamples[ui32NumCells];
+
+
+    ////////////////////// Acquire sampled data //////////////////////
+    ioctl_sampledCurrent(&ui32C1p, &ui32C1n, &ui32C2p, &ui32C2n);
+    ioctl_sampledAux(&ui32PackVolts, &ui32Therm1, &ui32Therm2, &ui32Therm3);
+    bq76_readSampledVoltages(pui16CellSamples, ui32NumCells);
+
+    // check thermals if needed
+    bool bDoThermo = !(ui64NumCalls % SYSTEM_THERMO_PART);
+    if(bDoThermo) {
+        // Intermediate thermistor readings for the BQ
+        uint16_t pui16ThermoSamples[psConfig->ui8NumBQModules*BQ_NUM_THERMISTOR];
+        bq76_readThermistors(pui16ThermoSamples);
+
+        //
+    }
+
+
+    ////////////////////// Do calculations //////////////////////
+    g_fCurrent = ((float)calc_adcToMilliAmps(
+            ui32C1p,
+            ui32C1n,
+            ui32C2p,
+            ui32C2n)) * 1E-3;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

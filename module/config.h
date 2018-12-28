@@ -40,12 +40,23 @@ typedef struct
     float fFirstSampleTime;
     float fOtherSampleTime;
 
-    uint8_t ui8NumCells
+    uint8_t ui8NumCells;
 
     // Comm timeouts
     uint32_t ui32WriteNoRespTimeout;
-    uint32_t ui32WriteRespTimeout
+    uint32_t ui32WriteRespTimeout;
 } tBQBoardCal;
+
+
+// Steinhart-hart approximation parameters
+typedef struct {
+    float fBallast;
+    float fNominalR;
+    float fA;
+    float fB;
+    float fC;
+    float fD;
+} tSHParams;
 
 
 
@@ -125,6 +136,11 @@ uint8_t config_load(tConf *psConfig);
  * which is defined at compile time
  */
 void config_default(tConf *psConfig);
+
+/**
+ * Utility function to determine the total number of cells in the system
+ */
+uint32_t config_totalNumcells(tConf *psConfig);
 
 #endif /* CONFIG_H_ */
 

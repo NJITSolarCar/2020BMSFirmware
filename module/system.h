@@ -45,6 +45,7 @@ const uint32_t SYSCTL_PERIPHS[] =
 };
 
 /** System Settings */
+#define SYSTEM_THERMO_PART      100
 
 // Clock settings, configured for 80 MHz. See datasheet page 208 for divider reference
 #define MCU_XTAL                SYSCTL_XTAL_8MHZ

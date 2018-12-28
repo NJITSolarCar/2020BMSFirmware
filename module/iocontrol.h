@@ -22,5 +22,20 @@ void ioctl_setBattNegAux(bool bEnable);
 void ioctl_setPrechargeMain(bool bEnable);
 void ioctl_setPrechargeAux(bool bEnable);
 
+/**
+ * Reads the sampled ADC readings. Returns a nonzero value if
+ * there is data sampled, false otherwise.
+ */
+uint8_t ioctl_sampledCurrent(
+        uint32_t *pui32C1p,
+        uint32_t *pui32C1n,
+        uint32_t *pui32C2p,
+        uint32_t *pui32C2n);
+
+uint8_t ioctl_sampledAux(
+        uint32_t *pui32PackVolts,
+        uint32_t *pui32Therm1,
+        uint32_t *pui32Therm2,
+        uint32_t *pui32Therm3);
 
 #endif /* IOCONTROL_H_ */

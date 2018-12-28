@@ -12,10 +12,16 @@
 #ifndef FLAG_H_
 #define FLAG_H_
 
+#include "config.h"
 
-uint32_t flag_faults(uint32_t ui32Mask);
+extern uint32_t g_ui32Faults;
+extern uint32_t g_ui32FaultData;
+
+extern float g_fCurrent;
+extern float g_fSOC;
+extern float *g_pfCellVoltages;
+extern float *g_pfThermoTemperatures;
 
 
-uint32_t flag_setFaults
 
 #endif /* FLAG_H_ */

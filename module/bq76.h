@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BQ_NUM_MODULES          2
+#define BQ_NUM_THERMISTOR       16
 #define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
 #define BQ_WRITE_RESP_TIMEOUT   2000 // usecs
 
@@ -155,6 +155,13 @@ uint8_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint8_t ui8BufSize);
 
 uint8_t bq76_readFaultSum();
 
+/**
+ * Reads the state of all the thermistors on the BQ76 modules. Because reading
+ * all the thermistors requires 2 sampling cycles, this call will wait for
+ * the bq76 chips to sample on the false mux setting, read the data, then do it
+ * again for the true mux setting.
+ */
+uint8_t bq76_readThermistors(uint16_t *pui16Buf);
 
 /*
  * Utility
