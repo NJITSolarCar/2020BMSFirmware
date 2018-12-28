@@ -77,6 +77,10 @@
 #define BQ_READ_BUF_SIZE        256
 #define BQ_WRITEREG_MAX_MSG     7 // Max data length allowed in bq76_writeReg(...)
 
+// Converts a direct reading from the AFE to a voltage
+#define BQ_ADC_TO_VOLTS(x)      ((5.0/65536.0) * ((float)x))
+
+
 /*
  * Initialization
  */
@@ -166,7 +170,6 @@ uint8_t bq76_readThermistors(uint16_t *pui16Buf);
 /*
  * Utility
  */
-float bq76_rawCellToVolts(uint16_t ui16CellVal);
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 uint8_t bq76_enabled();
 

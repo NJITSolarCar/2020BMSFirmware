@@ -15,6 +15,7 @@
 #define CALCULATION_H_
 
 #include <stdint.h>
+#include "types.h"
 
 /**
  * Calculates an updated state of charge, based on the current system state.
@@ -31,14 +32,9 @@ float calc_evalPoly(float *pfCoeffs, uint32_t ui32NumCoeffs, float x);
 
 /**
  * Converts a thermistor voltage to a temperature. fVoltFraction is the ratio
- * of the measured voltage to the max voltage, or v_measured / v_max. fBeta is
- * the beta coeficient of the steinhart-hart equation.
+ * of the measured voltage to the max voltage, or v_measured / v_max.
  */
-float calc_thermistorTemp(
-        float fVoltFraction,
-        float fBeta,
-        float fThermOhms,
-        float fBallastOhms);
+float calc_thermistorTemp(float fVoltFraction);
 
 
 /**

@@ -12,6 +12,8 @@
 #include "config.h"
 #include "bq76.h"
 #include "calculation.h"
+#include "types.h"
+#include "flag.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -29,7 +31,38 @@
 #include <inc/hw_memmap.h>
 
 
-static tConf *psConfig;
+static tConf *g_psConfig;
+
+
+static void system_readThermoData(uint32_t ui32Therm1, uint32_t ui32Therm2,
+                           uint32_t ui32Therm3)
+{
+    // Intermediate thermistor readings for the BQ
+    uint32_t ui32TotalNumTherm = g_psConfig->ui32NumBQModules
+            * BQ_NUM_THERMISTOR;
+
+    uint16_t pui16ThermoSamples[ui32TotalNumTherm];
+    bq76_readThermistors(pui16ThermoSamples);
+
+    // First 3 thermistors are on the main board, with a 12 bit ADC
+    g_pfThermoTemperatures[0] = calc_thermistorTemp(
+            ((float) ui32Therm1) / 4096.0);
+    g_pfThermoTemperatures[1] = calc_thermistorTemp(
+            ((float) ui32Therm2) / 4096.0);
+    g_pfThermoTemperatures[2] = calc_thermistorTemp(
+            ((float) ui32Therm3) / 4096.0);
+
+    // The others are on the BQ boards, which gives a 16 bit result
+    float fTmp;
+    for (uint32_t i = 0; i < ui32TotalNumTherm; i++)
+    {
+        fTmp = calc_thermistorTemp(((float) pui16ThermoSamples[i]) / 65536.0);
+        g_pfThermoTemperatures[i + 3] = fTmp;
+    }
+}
+
+
+
 
 void setPinConfigurations()
 {
@@ -162,12 +195,6 @@ void sys_init()
 static uint64_t g_ui64SysTickLastCall = 0;
 void system_tick(uint64_t ui64NumCalls) {
 
-    // Get timing intervals
-    uint64_t ui64Now = util_usecs();
-    uint64_t ui64dt = ui64Now - g_ui64SysTickLastCall;
-    g_ui64SysTickLastCall = ui64Now;
-
-
     ////////////////////// Variables //////////////////////
     // Raw current sensor readings
     uint32_t ui32C1p;
@@ -182,8 +209,17 @@ void system_tick(uint64_t ui64NumCalls) {
     uint32_t ui32Therm3;
 
     // Intermediate cell voltage readings
-    uint32_t ui32NumCells = config_totalNumcells(psConfig);
+    uint32_t ui32NumCells = config_totalNumcells(g_psConfig);
     uint16_t pui16CellSamples[ui32NumCells];
+
+    // Pack voltage by summing cell voltages
+    float fPVFromCells = 0.0;
+
+
+    // Get timing intervals
+    uint64_t ui64Now = util_usecs();
+    uint64_t ui64dt = ui64Now - g_ui64SysTickLastCall;
+    g_ui64SysTickLastCall = ui64Now;
 
 
     ////////////////////// Acquire sampled data //////////////////////
@@ -191,24 +227,30 @@ void system_tick(uint64_t ui64NumCalls) {
     ioctl_sampledAux(&ui32PackVolts, &ui32Therm1, &ui32Therm2, &ui32Therm3);
     bq76_readSampledVoltages(pui16CellSamples, ui32NumCells);
 
-    // check thermals if needed
+    // Calculate thermals (a slow task) only if needed
     bool bDoThermo = !(ui64NumCalls % SYSTEM_THERMO_PART);
-    if(bDoThermo) {
-        // Intermediate thermistor readings for the BQ
-        uint16_t pui16ThermoSamples[psConfig->ui8NumBQModules*BQ_NUM_THERMISTOR];
-        bq76_readThermistors(pui16ThermoSamples);
-
-        //
-    }
+    if(bDoThermo)
+        system_readThermoData(ui32Therm1, ui32Therm2, ui32Therm3);
 
 
     ////////////////////// Do calculations //////////////////////
+    // Determine current
     g_fCurrent = ((float)calc_adcToMilliAmps(
             ui32C1p,
             ui32C1n,
             ui32C2p,
             ui32C2n)) * 1E-3;
 
+    // Calculate cell voltages, and combined pack voltage
+    for(uint32_t i=0; i<ui32NumCells; i++) {
+        g_pfCellVoltages[i] = BQ_ADC_TO_VOLTS(pui16CellSamples[i]);
+        fPVFromCells += g_pfCellVoltages[i];
+    }
+
+    g_fSOC = calc_updateSOC(g_fCurrent, g_pfCellVoltages, ui32NumCells);
+
+
+    ////////////////////// Check for faults //////////////////////
 }
 
 
