@@ -213,8 +213,15 @@ void system_tick(uint64_t ui64NumCalls) {
     uint32_t ui32NumCells = config_totalNumcells(g_psConfig);
     uint16_t pui16CellSamples[ui32NumCells];
 
-    // Pack voltage by summing cell voltages
+    // Pack voltage from different ways
     float fPVFromCells = 0.0;
+    float fPVFromADC;
+
+    // maximum and minimum cell voltages
+    float fMinCellVolts = 10.0;
+    float fMaxCellVolts = -1.0;
+    uint16_t ui16MinCellIdx = 0;
+    uint16_t ui16MaxCellIdx = 0;
 
 
     // Get timing intervals
@@ -242,21 +249,144 @@ void system_tick(uint64_t ui64NumCalls) {
             ui32C2p,
             ui32C2n)) * 1E-3;
 
-    // Calculate cell voltages, and combined pack voltage
-    for(uint32_t i=0; i<ui32NumCells; i++) {
-        g_pfCellVoltages[i] = BQ_ADC_TO_VOLTS(pui16CellSamples[i]);
-        fPVFromCells += g_pfCellVoltages[i];
+    // Calculate cell voltages min / max voltages, and combined pack voltage
+    for(uint16_t i=0; i<ui32NumCells; i++) {
+        float fVolts = BQ_ADC_TO_VOLTS(pui16CellSamples[i]);
+        g_pfCellVoltages[i] = fVolts;
+        fPVFromCells += fVolts;
+
+        if(fVolts < fMinCellVolts) {
+            fMinCellVolts = fVolts;
+            ui16MinCellIdx = i;
+        } else if(fVolts > fMaxCellVolts) {
+            fMaxCellVolts = fVolts;
+            ui16MaxCellIdx = i;
+        }
     }
 
     g_fSOC = calc_updateSOC(g_fCurrent, g_pfCellVoltages, ui32NumCells);
+    fPVFromADC = calc_packVoltageFromADC(ui32PackVolts);
+    g_fPackVoltage = 0.5 * (fPVFromADC + fPVFromCells);
+
 
 
     ////////////////////// Check for faults //////////////////////
-    // Look through the cells for cell faults
+
+    // Keep a record of the starting fault state
+    uint32_t ui32PrevFaults = fault_getFaultsSet();
+
+    // Template fault information
+    tFaultInfo sTempFaultInfo;
+    sTempFaultInfo.bAsserted = true;
+    sTempFaultInfo.ui64TimeFlagged = ui64Now;
+
+    // Check each cell voltage
     for(uint32_t i=0; i<ui32NumCells; i++) {
+        sTempFaultInfo.data.ui32 = i;
         if(g_pfCellVoltages[i] < g_psConfig->fCellUVFaultVoltage)
-            fault_
+            fault_setFault(FAULT_CELL_UNDER_VOLTAGE, sTempFaultInfo);
+
+        else if(g_pfCellVoltages[i] > g_psConfig->fCellOVFaultVoltage)
+            fault_setFault(FAULT_CELL_OVER_VOLTAGE, sTempFaultInfo);
     }
+
+    // Check for cell imbalance
+    if(fMaxCellVolts - fMinCellVolts > g_psConfig->fCellImbalanceThresh) {
+        sTempFaultInfo.data.pui16[0] = ui16MinCellIdx;
+        sTempFaultInfo.data.pui16[1] = ui16MaxCellIdx;
+        fault_setFault(FAULT_IMBALANCED, sTempFaultInfo);
+    }
+
+    // check pack voltage disagree
+    if(fabs(fPVFromADC - fPVFromCells) > g_psConfig->fPVDisagree) {
+        sTempFaultInfo.data.ui32 = 1000 * (fPVFromADC - fPVFromCells);
+        fault_setFault(FAULT_PACK_VOLTAGE_DISAGREE, sTempFaultInfo);
+    }
+
+    // Check pack voltage range
+    if(g_fPackVoltage > g_psConfig->fMaxPackVoltage) {
+        sTempFaultInfo.data.ui32 = g_fPackVoltage * 1000;
+        fault_setFault(FAULT_PACK_OVER_VOLTAGE, sTempFaultInfo);
+    } else if(g_fPackVoltage < g_psConfig->fMinPackVoltage) {
+        sTempFaultInfo.data.ui32 = g_fPackVoltage * 1000;
+        fault_setFault(FAULT_PACK_UNDER_VOLTAGE, sTempFaultInfo);
+    }
+
+
+    // check SOC
+    if(g_fSOC > g_psConfig->fOChgSoc) {
+        sTempFaultInfo.data.ui32 = g_fSOC * 1000;
+        fault_setFault(FAULT_OVER_CHARGE, sTempFaultInfo);
+    } else if(g_fSOC < g_psConfig->fUChgSoc) {
+        sTempFaultInfo.data.ui32 = g_fSOC * 1000;
+        fault_setFault(FAULT_OVER_DISCHARGE, sTempFaultInfo);
+    }
+
+
+    // Short circuit current, immediately assert the fault
+    if(fabs(g_fCurrent) > g_psConfig->fOCShortAmps) {
+        sTempFaultInfo.data.ui32 = 1000 * fabs(g_fCurrent);
+        fault_setFault(FAULT_PACK_SHORT, sTempFaultInfo);
+    }
+
+    // Discharge too high, make sure it has been sustained for long enough
+    // to rule out startup transients
+    if(g_fCurrent > g_psConfig->fOCDischgFaultAmps) {
+
+        // if the warning has been active, and now has been running long
+        // enough to be a fault
+        bool bOCDischg =
+                g_ui64OCDischgStartTime != UINT64_MAX &&
+                ui64Now - g_ui64OCDischgStartTime >
+                g_psConfig->ui32PackOTFaultUsecs;
+
+        if(bOCDischg) {
+            sTempFaultInfo.data.ui32 = 1000 * g_fCurrent;
+            fault_setFault(FAULT_OVER_CURRENT_DISCHG, sTempFaultInfo);
+            g_ui64OCDischgStartTime = UINT64_MAX;
+        }
+    } else { // possible transient issue is no longer present, so reset
+        g_ui64OCDischgStartTime = UINT64_MAX;
+    }
+
+
+    // Charge current too high, make sure it has been sustained for long enough
+    // to rule out startup transients
+    if(fabs(g_fCurrent) < g_psConfig->fOCDischgFaultAmps) {
+
+        // if the warning has been active, and now has been running long
+        // enough to be a fault
+        bool bOCChg =
+                g_ui64OCChgStartTime != UINT64_MAX &&
+                ui64Now - g_ui64OCChgStartTime >
+                g_psConfig->ui32PackOTFaultUsecs;
+
+        if(bOCChg) {
+            sTempFaultInfo.data.ui32 = 1000 * fabs(g_fCurrent);
+            fault_setFault(FAULT_OVER_CURRENT_CHG, sTempFaultInfo);
+            g_ui64OCDischgStartTime = UINT64_MAX;
+        }
+    } else { // possible transient issue is no longer present, so reset
+        g_ui64OCDischgStartTime = UINT64_MAX;
+    }
+
+
+    // Check temperature if on a thermo cycle
+    if(bDoThermo) {
+        uint32_t ui32NTherm = 3 + g_psConfig->ui32NumBQModules * BQ_NUM_THERMISTOR;
+        for(uint32_t i=0; i<ui32NTherm; i++) {
+            sTempFaultInfo.data.ui32 = i;
+            if(g_pfThermoTemperatures[i] < g_psConfig->fPackUTFaultTemp)
+                fault_setFault(FAULT_UNDER_TEMP, sTempFaultInfo);
+
+            if(g_pfThermoTemperatures[i] > g_psConfig->fPackOTFaultTemp)
+                fault_setFault(FAULT_OVER_TEMP, sTempFaultInfo);
+        }
+    }
+
+
+    ///////////////////////// Drive Outputs /////////////////////////
+    uint8_t ui8FaultLevel
 }
 
 

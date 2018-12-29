@@ -38,6 +38,13 @@ float calc_thermistorTemp(float fVoltFraction);
 
 
 /**
+ * Converts the adc reading of pack voltage to a discreet voltage. Note that
+ * it may require specific calibrations
+ */
+float calc_packVoltageFromADC(uint32_t ui32PackVolts);
+
+
+/**
  * Converts the raw ADC readings into a real current draw, in milliamps. This
  * compares the 4 raw inputs, and deciphers which one to use, based on which
  * inputs are saturated. In addition, it applies whatever scalars and shifts

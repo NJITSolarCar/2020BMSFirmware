@@ -17,11 +17,15 @@
 extern uint32_t g_ui32Faults;
 extern uint32_t g_ui32FaultData;
 
+// Data metrics
 extern float g_fCurrent;
 extern float g_fSOC;
+extern float g_fPackVoltage;
 extern float *g_pfCellVoltages;
 extern float *g_pfThermoTemperatures;
 
-
+// warning status start times. Will read UINT64_MAX if inactive
+extern uint64_t g_ui64OCDischgStartTime;
+extern uint64_t g_ui64OCChgStartTime;
 
 #endif /* FLAG_H_ */

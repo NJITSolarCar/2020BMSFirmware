@@ -14,6 +14,27 @@
 // Maximun number of supported BQ76 Modules
 #define CONF_MAX_BQ_MODULES                     4
 
+///////////////////////////////// Types ////////////////////////////////
+
+// Additional representation of fault data
+typedef union {
+    uint32_t ui32;
+    uint16_t pui16[2];
+    uint8_t pui8[4];
+} tFaultData;
+
+
+
+// Additional information about asserted faults
+typedef struct
+{
+    bool bAsserted;
+    uint64_t ui64TimeFlagged;
+    tFaultData data;
+} tFaultInfo;
+
+
+
 // Calibrations for a single BQ76 module
 typedef struct
 {
@@ -35,6 +56,7 @@ typedef struct
 } tBQBoardCal;
 
 
+
 // Steinhart-hart approximation parameters
 typedef struct {
     float fBallast;
@@ -48,7 +70,7 @@ typedef struct {
 
 
 // Represents all configuration data in the system, packed
-// for easy sorage and manipulation
+// for easy storage and manipulation
 typedef struct
 {
     // Multiplier to convert raw inputs to amps
@@ -73,22 +95,29 @@ typedef struct
     // Cell voltage fault levels
     float fCellUVFaultVoltage;
     float fCellOVFaultVoltage;
+    float fCellImbalanceThresh;
+
+    // max disagreement between measured pack voltage and sum of cell voltages
+    float fPVDisagree;
+    float fMaxPackVoltage;
+    float fMinPackVoltage;
 
     // Sustained overcurrent fault
-    float fOCFaultAmps;
+    float fOCDischgFaultAmps;
+    float fOCChgFaultAmps;
 
     // Transient overcurrent fault / timing
-    float fOCTransientFaultAmps;
-    uint32_t ui32OCTransientFaultUsecs;
+    float fOCShortAmps;
+    uint32_t ui32OCShortUsecs;
 
     // Overtemperature fault threshold
     float fPackOTFaultTemp;
+    float fPackUTFaultTemp;
     uint32_t ui32PackOTFaultUsecs;
 
     // Charging faults
     float fOChgSoc;
     float fUChgSoc;
-    float fChgOCFault;
 
 
     // BQ Configurations

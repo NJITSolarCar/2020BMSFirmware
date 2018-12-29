@@ -16,11 +16,16 @@
 #define FAULT_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
-// If the data for a fault is invalid, it should be set to this
-#define FAULT_NO_DATA               UINT32_MAX
+#include "types.h"
+
+// Default fault data object to indicate that there is no data present
+// #define FAULT_DATA_NONE             { UINT32_MAX }
 
 // Fault Codes
+#define FAULT_PACK_VOLTAGE_DISAGREE 0x10000
+#define FAULT_OVER_CURRENT_DISCHG   0x8000
 #define FAULT_PACK_OVER_VOLTAGE     0x4000
 #define FAULT_PACK_UNDER_VOLTAGE    0x2000
 #define FAULT_CELL_OVER_VOLTAGE     0x1000
@@ -32,17 +37,38 @@
 #define FAULT_PACK_OPEN_CIRCUIT     0x40
 #define FAULT_IMBALANCED            0x20
 #define FAULT_PACK_SHORT            0x10
-#define FAULT_OVER_CURRENT          0x8
+#define FAULT_OVER_CURRENT_CHG      0x8
 #define FAULT_COMMUNICATIONS        0x4
 #define FAULT_BQ_CHIP_FAULT         0x2
 #define FAULT_PACK_GENERAL          0x1
 
 
 /**
- * Registers this fault with the system. ui32Data should be for the
- * highest level fault
+ * Registers this fault with the system.
  */
-void fault_setFault(uint32_t ui32Faults, uint32_t ui32Data);
+void fault_setFault(uint32_t ui32Faults, tFaultInfo uFaultInfo);
+
+
+/**
+ * Returns the system fault level classification based on the current fault
+ * states
+ */
+uint8_t fault_getLevel();
+
+
+/**
+ * Returns a bit packed integer detailing which faults are set at this moment
+ */
+uint32_t fault_getFaultsSet();
+
+
+/**
+ * Determines the time which a certain fault was asserted. Note that only
+ * a single bit in ui32Fault should be set, corresponding to a single fault.
+ * Returns true if the fault is asserted and a valid time was retrieved, false
+ * otherwise.
+ */
+bool fault_timeAsserted(uint32_t ui32Fault, uint64_t *pui64Time);
 
 
 /**

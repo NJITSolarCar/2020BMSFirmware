@@ -11,6 +11,9 @@
 #ifndef IOCONTROL_H_
 #define IOCONTROL_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+
 // Relay I/O
 void ioctl_setChargeMain(bool bEnable);
 void ioctl_setChargeAux(bool bEnable);
@@ -21,6 +24,11 @@ void ioctl_setBattNegMain(bool bEnable);
 void ioctl_setBattNegAux(bool bEnable);
 void ioctl_setPrechargeMain(bool bEnable);
 void ioctl_setPrechargeAux(bool bEnable);
+
+/**
+ * Sets the state of all relays in the system to a certain value
+ */
+void ioctl_setAll(bool bEnable);
 
 /**
  * Reads the sampled ADC readings. Returns a nonzero value if
