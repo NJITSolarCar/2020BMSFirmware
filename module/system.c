@@ -386,7 +386,40 @@ void system_tick(uint64_t ui64NumCalls) {
 
 
     ///////////////////////// Drive Outputs /////////////////////////
-    uint8_t ui8FaultLevel
+    uint8_t ui8FaultLevel = fault_getLevel();
+    uint32_t ui32FaultMask = fault_getFaultsSet();
+
+    if(g_bEnable) {
+        switch (ui8FaultLevel) {
+        case 0:
+        case 1:
+        case 2:
+            ioctl_setAll(false);
+            break;
+        case 3:
+            bool bEnChg = !(ui32FaultMask & FAULT_L3_CHARGE_RELAY_TRIGGERS);
+            bool bEnDis = !(ui32FaultMask & FAULT_L3_DISCHARGE_RELAY_TRIGGERS);
+
+            ioctl_setChargeMain(bEnChg);
+            ioctl_setChargeAux(bEnChg);
+            ioctl_setPrechargeMain(bEnChg);
+            ioctl_setPrechargeAux(bEnChg);
+            ioctl_setDischargeMain(bEnDis);
+            ioctl_setDischargeAux(bEnDis);
+            ioctl_setBattNegMain(true);
+            ioctl_setBattNegAux(true);
+            break;
+        case 4:
+        case 5:
+            ioctl_setAll(true);
+            break;
+        default:
+            // We shouldn't be here...
+            // TODO: set a flag and soft lock for debugging
+            break;
+        }
+    } else
+        ioctl_setAll(false);
 }
 
 

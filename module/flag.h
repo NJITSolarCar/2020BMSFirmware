@@ -12,6 +12,8 @@
 #ifndef FLAG_H_
 #define FLAG_H_
 
+#include <stdint.h>
+#include <stdbool.h>
 #include "config.h"
 
 extern uint32_t g_ui32Faults;
@@ -24,8 +26,7 @@ extern float g_fPackVoltage;
 extern float *g_pfCellVoltages;
 extern float *g_pfThermoTemperatures;
 
-// warning status start times. Will read UINT64_MAX if inactive
-extern uint64_t g_ui64OCDischgStartTime;
-extern uint64_t g_ui64OCChgStartTime;
+// Control flags
+extern bool g_bEnable;
 
 #endif /* FLAG_H_ */

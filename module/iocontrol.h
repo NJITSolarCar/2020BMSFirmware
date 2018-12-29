@@ -19,7 +19,6 @@ void ioctl_setChargeMain(bool bEnable);
 void ioctl_setChargeAux(bool bEnable);
 void ioctl_setDischargeMain(bool bEnable);
 void ioctl_setDischargeAux(bool bEnable);
-void ioctl_setDischargeMain(bool bEnable);
 void ioctl_setBattNegMain(bool bEnable);
 void ioctl_setBattNegAux(bool bEnable);
 void ioctl_setPrechargeMain(bool bEnable);
