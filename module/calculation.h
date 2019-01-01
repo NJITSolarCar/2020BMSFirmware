@@ -34,7 +34,7 @@ float calc_evalPoly(float *pfCoeffs, uint32_t ui32NumCoeffs, float x);
  * Converts a thermistor voltage to a temperature. fVoltFraction is the ratio
  * of the measured voltage to the max voltage, or v_measured / v_max.
  */
-float calc_thermistorTemp(float fVoltFraction);
+float calc_thermistorTemp(float fVoltFraction, tSHParams *psSHDat);
 
 
 /**

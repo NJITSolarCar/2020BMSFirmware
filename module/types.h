@@ -89,7 +89,7 @@ typedef struct
     // away from an extreme, it is considered saturated
     uint16_t ui16ADCSaturationThresh;
 
-    tSHParams sThermoparams;
+    tSHParams sThermoParams;
 
 
     // Cell voltage fault levels

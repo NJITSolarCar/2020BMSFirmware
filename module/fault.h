@@ -27,11 +27,11 @@
 #define FAULT_MASK(x)               (1 << x)
 
 // Fault level thresholds
-#define FAULT_L0_THRESH             0 // 0x1
-#define FAULT_L1_THRESH             2 // 0x4
-#define FAULT_L2_THRESH             8 // 0x100
-#define FAULT_L3_THRESH             17 // 0x20000
-#define FAULT_L4_THRESH             19 // 0x100000
+#define FAULT_L0_THRESH             0
+#define FAULT_L1_THRESH             2
+#define FAULT_L2_THRESH             9
+#define FAULT_L3_THRESH             15
+#define FAULT_L4_THRESH             20
 
 // Specific fault bits
 // L0 Faults
@@ -53,27 +53,27 @@
 // L3 Faults
 #define FAULT_OVER_CURRENT_DISCHG   10 // 0x400
 #define FAULT_OVER_CURRENT_CHG      11 // 0x800
-#define FAULT_OVER_DISCHARGE        12 // 0x1000
-#define FAULT_OVER_CHARGE           13 // 0x2000
-#define FAULT_PACK_OVER_VOLTAGE     14 // 0x4000
-#define FAULT_PACK_UNDER_VOLTAGE    15 // 0x8000
-#define FAULT_CELL_OVER_VOLTAGE     16 // 0x10000
-#define FAULT_CELL_UNDER_VOLTAGE    17 // 0x20000
+#define FAULT_PACK_OVER_VOLTAGE     12 // 0x1000
+#define FAULT_PACK_UNDER_VOLTAGE    13 // 0x2000
+#define FAULT_CELL_OVER_VOLTAGE     14 // 0x4000
+#define FAULT_CELL_UNDER_VOLTAGE    15 // 0x8000
 
 // L4 Faults
-#define FAULT_TRANSIENT_CHG_OC      18 // 0x40000
-#define FAULT_TRANSIENT_DISCHG_OC   19 // 0x80000
+#define FAULT_TRANSIENT_CHG_OC      16 // 0x10000
+#define FAULT_TRANSIENT_DISCHG_OC   17 // 0x20000
+#define FAULT_OVER_DISCHARGE        18 // 0x40000
+#define FAULT_OVER_CHARGE           19 // 0x80000
 #define FAULT_GEN_COM               20 // 0x100000
 
 
 // Some fault class masks to determine what L3 faults disable certain relays
 #define FAULT_L3_CHARGE_RELAY_TRIGGERS        \
-    ( FAULT_MASK(FAULT_OVER_CHARGE)         | \
+    ( FAULT_MASK(FAULT_CELL_OVER_VOLTAGE)   | \
     FAULT_MASK(FAULT_OVER_CURRENT_CHG)      | \
     FAULT_MASK(FAULT_PACK_OVER_VOLTAGE) )
 
 #define FAULT_L3_DISCHARGE_RELAY_TRIGGERS     \
-    ( FAULT_MASK(FAULT_OVER_DISCHARGE)      | \
+    ( FAULT_MASK(FAULT_CELL_UNDER_VOLTAGE)  | \
     FAULT_MASK(FAULT_OVER_CURRENT_DISCHG)   | \
     FAULT_MASK(FAULT_PACK_UNDER_VOLTAGE) )
 
@@ -98,8 +98,7 @@ uint32_t fault_getFaultsSet();
 
 
 /**
- * Determines the time which a certain fault was asserted. Note that only
- * a single bit in ui32Fault should be set, corresponding to a single fault.
+ * Determines the time which a certain fault was asserted.
  * Returns true if the fault is asserted and a valid time was retrieved, false
  * otherwise.
  */
@@ -107,21 +106,10 @@ bool fault_timeAsserted(uint32_t ui32Fault, uint64_t *pui64Time);
 
 
 /**
- * Clears the specified faults from the system. Note that if the highest fault
- * is cleared, then the fault data flag will be set to FAULT_NO_DATA
+ * Clears the specified fault from the system
  */
-void fault_clearFaults(uint32_t ui32Mask);
+void fault_clearFault(uint32_t ui32Fault);
 
-
-/**
- * Sets the operational fault level of the system. This can be any number from 0-5,
- * inclusive. Level 0 is a software crash or watchdog death, 1 is a fatal but non-
- * halting fault that immediately shuts down the battery system. Level 2 is a
- * dangerous issue that will automatically disable effected systems, Level
- * 3 is a persistent fault, but it doesn't shut anything down, Level 4 is like
- * level 3 but it doesn't remain after a reset, and level 5 means no fault.
- */
-void fault_assertFaultLevel(uint8_t ui8State);
 
 
 /**
