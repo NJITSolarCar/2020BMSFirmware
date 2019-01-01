@@ -14,5 +14,6 @@
  * Reports the current system uptime in microseconds
  */
 uint64_t util_usecs();
+uint32_t util_ui32Max(uint32_t a, uint32_t b);
 
 #endif /* MODULE_UTIL_H_ */

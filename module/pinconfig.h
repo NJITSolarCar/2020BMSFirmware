@@ -17,7 +17,8 @@
 
 #include <inc/hw_memmap.h>
 
-
+/** General use peripherals */
+#define BQLOOP_TIMER            TIMER1_BASE
 
 /** General Purpose pins */
 
@@ -136,10 +137,6 @@
 #define THERM3_PORT             GPIO_PORTD_BASE
 #define THERM3_PIN              GPIO_PIN_0
 #define THERM3_CHANNEL          ADC_CTL_CH7
-
-// ADC timer settings
-#define THERMPV_TIMER           TIMER5_BASE
-#define THERMPV_TIMERCFG        TIMER_CFG_PERIODIC
 
 
 

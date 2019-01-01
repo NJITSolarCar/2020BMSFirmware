@@ -18,87 +18,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Maximun number of supported BQ76 Modules
-#define CONF_MAX_BQ_MODULES                     4
-
 ///////////////////////////////// DEFAULT CONFIGURATIONS //////////////////////////////
 #define CONF_DEFAULT_NUM_CELLS                  16
 #define CONF_DEFAULT_COLLATE_CELL_SAMPLES       true
 
 // BQ76 module configurations
 
-// Calibrations for a single BQ76 module
-typedef struct
-{
-    // BQ76 Sampling settings
-    bool bCollateCellSamples;
-    uint8_t ui8NumOverSample;
-    int8_t i8CellGEC;
-    int8_t i8CellOEC;
 
-    // usecs for cell sample periods
-    float fFirstSampleTime;
-    float fOtherSampleTime;
-
-    uint8_t ui8NumCells
-
-    // Comm timeouts
-    uint32_t ui32WriteNoRespTimeout;
-    uint32_t ui32WriteRespTimeout
-} tBQBoardCal;
-
-
-
-// Represents all configuration data in the system, packed
-// for easy sorage and manipulation
-typedef struct
-{
-    // Multiplier to convert raw inputs to amps
-    float fCurr1PosScl;
-    float fCurr1NegScl;
-    float fCurr2PosScl;
-    float fCurr2NegScl;
-
-    // Constant shift to apply to the calculated current
-    float fCurr1PosOff;
-    float fCurr1NegOff;
-    float fCurr2PosOff;
-    float fCurr2NegOff;
-
-    // If an adc input is at least this many counts
-    // away from an extreme, it is considered saturated
-    uint16_t ui16ADCSaturationThresh;
-
-
-    // Cell voltage fault levels
-    float fCellUVFaultVoltage;
-    float fCellOVFaultVoltage;
-
-    // Sustained overcurrent fault
-    float fOCFaultAmps;
-
-    // Transient overcurrent fault / timing
-    float fOCTransientFaultAmps;
-    uint32_t ui32OCTransientFaultUsecs;
-
-    // Overtemperature fault threshold
-    float fPackOTFaultTemp;
-    uint32_t ui32PackOTFaultUsecs;
-
-    // Charging faults
-    float fOChgSoc;
-    float fUChgSoc;
-    float fChgOCFault;
-
-
-    // BQ Configurations
-    uint8_t ui8NumBQModules;
-    tBQBoardCal bqCals[CONF_MAX_BQ_MODULES];
-
-    // polynomial to scale voltage to SOC
-    float pfVoltsToSocPoly[8];
-
-} tConf;
 
 
 /**
@@ -125,6 +51,11 @@ uint8_t config_load(tConf *psConfig);
  * which is defined at compile time
  */
 void config_default(tConf *psConfig);
+
+/**
+ * Utility function to determine the total number of cells in the system
+ */
+uint32_t config_totalNumcells(tConf *psConfig);
 
 #endif /* CONFIG_H_ */
 

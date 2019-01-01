@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BQ_NUM_MODULES          2
+#define BQ_NUM_THERMISTOR       16
 #define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
 #define BQ_WRITE_RESP_TIMEOUT   2000 // usecs
 
@@ -63,6 +63,18 @@
 #define BQ_OVSMP_16             0
 #define BQ_OVSMP_32             0
 
+// Fault summary bits
+#define BQ_UV_FAULT_SUM         (1 << 15)
+#define BQ_OV_FAULT_SUM         (1 << 14)
+#define BQ_AUXUV_FAULT_SUM      (1 << 13)
+#define BQ_AUXOV_FAULT_SUM      (1 << 12)
+#define BQ_CMPUV_FAULT_SUM      (1 << 11)
+#define BQ_CMPOV_FAULT_SUM      (1 << 10)
+#define BQ_COMM_FAULT_SUM       (1 << 9)
+#define BQ_SYS_FAULT_SUM        (1 << 8)
+#define BQ_CHIP_FAULT_SUM       (1 << 7)
+#define BQ_GPI_FAULT_SUM        (1 << 6)
+
 
 // Baud rates to use for UART. The BQ76 defaults to BQBAUD_INIT, and that
 // is changed to BQBAUD_RUNNING during initialization to boost performance
@@ -77,11 +89,16 @@
 #define BQ_READ_BUF_SIZE        256
 #define BQ_WRITEREG_MAX_MSG     7 // Max data length allowed in bq76_writeReg(...)
 
+// Converts a direct reading from the AFE to a voltage
+#define BQ_ADC_VMAX             5.0
+#define BQ_ADC_TO_VOLTS(x)      ((BQ_ADC_VMAX/65536.0) * ((float)(x)))
+#define BQ_ADC_TO_VOLT_FRAC(x)  ((1.0/65536.0) * ((float)(x)))
+
+
 /*
  * Initialization
  */
 void bq76_connect();
-uint8_t bq76_faultStat();
 uint8_t bq76_autoAddress();
 
 
@@ -147,19 +164,37 @@ uint8_t bq76_setCellsPopulated(uint8_t ui8Addr, uint16_t ui16CellMask);
 /*
  * High Level Functionality
  */
+
 uint8_t bq76_StartCellVoltageSample();
 uint8_t bq76_startThermoSample(bool bMuxState);
 
 uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
-uint8_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint8_t ui8BufSize);
+uint32_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint32_t ui32BufSize);
 
-uint8_t bq76_readFaultSum();
 
+/**
+ * Reads the aggregate fault status of each bq76 module on the stack. Returns
+ * the number of modules that have been read, or 0 on an error.
+ */
+uint8_t bq76_readFaultSum(uint16_t *pui16FaultSum);
+uint8_t bq76_getCellsUV(uint16_t *pui16CellMasks, uint8_t ui8BufSize);
+uint8_t bq76_getCellsOV(uint16_t *pui16CellMasks, uint8_t ui8BufSize);
+uint8_t bq76_getComFaults(uint16_t *pui16FaultMasks, uint8_t ui8BufSize);
+uint8_t bq76_getChipFaults(uint16_t *pui16FaultMasks, uint8_t ui8BufSize);
+
+bool bq76_faultPinActive();
+
+/**
+ * Reads the state of all the thermistors on the BQ76 modules. Because reading
+ * all the thermistors requires 2 sampling cycles, this call will wait for
+ * the bq76 chips to sample on the false mux setting, read the data, then do it
+ * again for the true mux setting.
+ */
+uint8_t bq76_readThermistors(uint16_t *pui16Buf);
 
 /*
  * Utility
  */
-float bq76_rawCellToVolts(uint16_t ui16CellVal);
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 uint8_t bq76_enabled();
 

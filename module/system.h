@@ -46,6 +46,14 @@ const uint32_t SYSCTL_PERIPHS[] =
 
 /** System Settings */
 
+// Fraction of the time certain samples run. Numbers are "weird" so the calls
+// don't intersect as often
+#define SYSTEM_THERMO_PART      100
+#define SYSTEM_BQ_THERMO_PART   101
+#define SYSTEM_BQ_INTERNAL_PART 99973
+
+#define SYSTEM_NUM_MCU_THERMO   3
+
 // Clock settings, configured for 80 MHz. See datasheet page 208 for divider reference
 #define MCU_XTAL                SYSCTL_XTAL_8MHZ
 #define MCU_VCO                 SYSCTL_CFG_VCO_480
