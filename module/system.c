@@ -33,9 +33,6 @@
 #include <inc/hw_memmap.h>
 
 
-static tConf *g_psConfig;
-
-
 
 
 /**

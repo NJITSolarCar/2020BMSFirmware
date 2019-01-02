@@ -57,7 +57,11 @@ int32_t calc_adcToMilliAmps(
         uint16_t ui16Curr2Neg);
 
 
-
+float calc_adcToAmps(
+        uint16_t ui16Curr1Pos,
+        uint16_t ui16Curr1Neg,
+        uint16_t ui16Curr2Pos,
+        uint16_t ui16Curr2Neg);
 
 
 #endif /* CALCULATION_H_ */

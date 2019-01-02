@@ -28,5 +28,6 @@ extern float *g_pfThermoTemperatures;
 
 // Control flags
 extern bool g_bEnable;
+extern tConf *g_psConfig;
 
 #endif /* FLAG_H_ */

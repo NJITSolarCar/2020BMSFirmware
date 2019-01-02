@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define IOCTL_VCC                   3.3
+#define IOCTL_ADC_TO_VOLT_FRAC(x)   ((1.0/4096.0) * (float)(x))
+#define IOCTL_ADC_TO_VOLTS(x)       ((IOCTL_VCC/4096.0) * (float)(x))
+
 // Relay I/O
 void ioctl_setChargeMain(bool bEnable);
 void ioctl_setChargeAux(bool bEnable);
@@ -44,5 +48,8 @@ uint8_t ioctl_sampledAux(
         uint32_t *pui32Therm1,
         uint32_t *pui32Therm2,
         uint32_t *pui32Therm3);
+
+/////////////////////////////////////////////////////////////
+void ioctl_startAuxSample();
 
 #endif /* IOCONTROL_H_ */

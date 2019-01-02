@@ -16,6 +16,23 @@
 
 ///////////////////////////////// Types ////////////////////////////////
 
+typedef enum {
+    INITIALIZE,
+    TEST,
+    RESET,
+    FAULT_CLEAR,
+    FAULT_CALC,
+    CELL_SAMPLE,
+    CELL_READ,
+    THERM1_SAMPLE,
+    THERM1_READ,
+    THERM2_SAMPLE,
+    THERM2_READ,
+    CURRENT_READ,
+    AUX_READ,
+    IDLE
+} tSystemState;
+
 // Additional representation of fault data
 typedef union {
     uint32_t ui32;

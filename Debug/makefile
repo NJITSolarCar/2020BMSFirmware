@@ -10,10 +10,10 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
-"./main.obj" \
 "./tm4c1230h6pm_startup_ccs.obj" \
 "./tm4c123gh6pm_startup_ccs.obj" \
 "./module/bq76.obj" \
+"./module/main.obj" \
 "./module/system.obj" \
 "../tm4c1230h6pm.cmd" \
 "../tm4c123gh6pm.cmd" \
@@ -147,7 +147,7 @@ all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 2020BMSFirmware.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power="1,2,3,4,5,7,9,10,12" --advice:power_severity=warning --define=ccs="ccs" --define=PART_TM4C1230H6PM -g --c99 --float_operations_allowed=32 --gcc --printf_support=full --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"2020BMSFirmware.map" --heap_size=0 --stack_size=512 -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="2020BMSFirmware_linkInfo.xml" --rom_model -o "2020BMSFirmware.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power="1,2,3,4,5.2,5.3,7,9,10,12" --advice:power_severity=warning --define=ccs="ccs" --define=PART_TM4C1230H6PM -g --c99 --float_operations_allowed=32 --gcc --printf_support=full --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"2020BMSFirmware.map" --heap_size=0 --stack_size=512 -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="2020BMSFirmware_linkInfo.xml" --rom_model -o "2020BMSFirmware.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
@@ -161,8 +161,8 @@ all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main.obj" "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq76.obj" "module\system.obj" 
-	-$(RM) "main.d" "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq76.d" "module\system.d" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq76.obj" "module\main.obj" "module\system.obj" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq76.d" "module\main.d" "module\system.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

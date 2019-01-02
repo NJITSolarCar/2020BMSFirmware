@@ -129,4 +129,7 @@ uint8_t fault_getPersistentFaults(uint32_t *pui32FaultSum, uint32_t *pui32Data);
 uint8_t fault_writePersistentFaults(uint32_t *pui32FaultSum, uint32_t *pui32Data);
 
 
+
+void fault_clearNonPersistent();
+
 #endif /* FAULT_H_ */

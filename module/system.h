@@ -13,6 +13,9 @@
 #define SYSTEM_H_
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#include "types.h"
 
 #include <driverlib/sysctl.h>
 
@@ -96,6 +99,21 @@ void system_tick();
  * it will hang up the system, so it cannot leave this state until a manual reset.
  */
 void system_abort();
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+void system_initialize();
+void system_reset();
+void system_self_test();
+void system_determine_faults();
+void system_determine_outputs();
+void system_parseCells(uint16_t *pui16Samples, uint32_t ui32bufSize);
+void system_parseThermo1(uint16_t *pui16Samples, uint32_t ui32bufSize);
+void system_parseThermo2(uint16_t *pui16Samples, uint32_t ui32bufSize);
+
+tSystemState system_nextState(tSystemState eNow, bool *pbDataValid);
 
 #endif /* SYSTEM_H_ */
 

@@ -22,6 +22,12 @@
 #define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
 #define BQ_WRITE_RESP_TIMEOUT   2000 // usecs
 
+// Sampling modes
+#define BQ_SAMPLE_INVALID       0
+#define BQ_SAMPLE_CELL          1
+#define BQ_SAMPLE_THERMO1       2
+#define BQ_SAMPLE_THERMO2       3
+
 // Frame initialization byte settings
 #define BQ_FRM_TYPE_RESPONSE    0x00 // Response Frame
 #define BQ_FRM_TYPE_COMMAND     0x80 // Command Frame
@@ -198,5 +204,7 @@ uint8_t bq76_readThermistors(uint16_t *pui16Buf);
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 uint8_t bq76_enabled();
 
+///////////////////////////////////////////////////////////
+bool bq76_isSampling();
 
 #endif /* BQ76_H_ */
