@@ -21,7 +21,6 @@ typedef enum {
     TEST,
     RESET,
     FAULT_CLEAR,
-    FAULT_CALC,
     CELL_SAMPLE,
     CELL_READ,
     THERM1_SAMPLE,
@@ -29,7 +28,9 @@ typedef enum {
     THERM2_SAMPLE,
     THERM2_READ,
     CURRENT_READ,
+    AUX_SAMPLE,
     AUX_READ,
+    BRANCH_PONT,
     IDLE
 } tSystemState;
 

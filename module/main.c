@@ -89,7 +89,8 @@ int main(void)
 	    if(bDataValid) {
 	        system_determine_faults();
 	        system_determine_outputs();
-	    }
+	    } else
+	        ioctl_setAll(false);
 
 	    // Determine the next state
 	    eState = system_nextState(eState, &bDataValid);

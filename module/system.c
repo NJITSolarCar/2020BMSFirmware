@@ -552,7 +552,93 @@ void sys_init()
     FPUStackingDisable();
 }
 
+/**
+ * ============================================================================
+ * ============================================================================
+ */
 
+/**
+ * Computes the next state of the system state machine
+ */
+tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
+    // If set, is in the startup sequence vs. normal operation
+    static bool bInStartup;
+    static uint32 ui32CellSampleCount = 0;
+    static bool bThermo2;
+
+    // revert to the start sequence if needed
+    if(eNow == INITIALIZE || eNow == TEST || eNow == RESET)
+        bInStartup = true;
+
+    // just walk through the sequence
+    if(bInStartup) {
+        switch(eNow) {
+            case INITIALIZE:    return TEST;
+            case TEST:          return FAULT_CLEAR;
+            case FAULT_CLEAR:   return RESET;
+            case RESET:         return AUX_SAMPLE;
+            case AUX_SAMPLE:    return CELL_SAMPLE;
+            case CELL_SAMPLE:   return CURRENT_READ;
+            case CURRENT_READ:  return AUX_READ;
+            case AUX_READ:      return CELL_READ;
+            case CELL_READ:     return THERM1_SAMPLE;
+            case THERM1_SAMPLE: return THERM1_READ;
+            case THERM1_READ:   return THERM2_SAMPLE;
+            case THERM2_SAMPLE: return THERM2_READ;
+            case THERM2_READ:   return BRANCH_PONT;
+            case BRANCH_PONT:
+                bInStartup = false;
+                *pbDataValid = true;
+                return CELL_SAMPLE;
+        }
+    } else { // main operations state loop
+        ui32CellSampleCount++;
+        switch(eNow) {
+            case CELL_SAMPLE:
+                ui32CellSampleCount++;
+                return CURRENT_READ;
+
+            // need a branch as we could be here in either the cell, thermo 1,
+            // or thermo 2 sample cycle. if the sample count != 0,
+            // we are in a cell cycle
+            case CURRENT_READ:
+                if(bq76_isSampling())
+                    return CURRENT_READ;
+                else if(ui32CellSampleCount)    return CELL_READ;
+                else if(bThermo2)               return THERM2_READ;
+                else                            return THERM1_READ;
+
+            case CELL_READ:     return BRANCH_PONT;
+
+            case BRANCH_PONT:
+                if(ui32CellSampleCount > SYSTEM_THERMO_PART) {
+                    ui32CellSampleCount = 0;
+                    return THERM1_SAMPLE;
+                }
+                else
+                    return CELL_SAMPLE;
+
+            case THERM1_SAMPLE:
+                bThermo2 = false;
+                return AUX_SAMPLE;
+
+            case AUX_SAMPLE:    return AUX_READ;
+            case AUX_READ:
+                if(bq76_isSampling())
+                    return CURRENT_READ;
+                else
+                    return THERM1_READ;
+
+            case THERM1_READ:   return THERM2_SAMPLE;
+            case THERM2_SAMPLE:
+                bThermo2 = true;
+                return CURRENT_READ;
+
+            case THERM2_SAMPLE: return BRANCH_PONT;
+
+        }
+    }
+}
 
 
 
