@@ -31,7 +31,9 @@ typedef enum {
     AUX_SAMPLE,
     AUX_READ,
     BRANCH_PONT,
-    IDLE
+    VOLT_FAULTS,
+    THERM_FAULTS,
+    INVALID
 } tSystemState;
 
 // Additional representation of fault data

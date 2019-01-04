@@ -51,5 +51,8 @@ uint8_t ioctl_sampledAux(
 
 /////////////////////////////////////////////////////////////
 void ioctl_startAuxSample();
+void ioctl_configGPIO();
+void ioctl_configADC();
+
 
 #endif /* IOCONTROL_H_ */

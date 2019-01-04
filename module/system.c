@@ -1,5 +1,5 @@
 /*
- * pinconfig.c
+ * system.c
  *
  *  Created on: Nov 4, 2018
  *      Author: Duemmer
@@ -481,7 +481,7 @@ void configADC()
             CURRENT1NEG_CHANNEL |
             CURRENT2POS_CHANNEL |
             CURRENT2NEG_CHANNEL |
-            ADC_CTL_IE |
+            ADC_CTL_IE          |
             ADC_CTL_END
     );
     ADCHardwareOversampleConfigure(CURRENT_MODULE, CURRENT_OVERSAMPLE);
@@ -530,8 +530,12 @@ void configGPIO() {
 }
 
 
+/**
+ * ============================================================================
+ * ============================================================================
+ */
 
-void sys_init()
+void system_initialize()
 {
     // Set the clock to active operation
     SysCtlClockSet(
@@ -549,13 +553,12 @@ void sys_init()
     configADC();
     configGPIO();
     FPUEnable();
-    FPUStackingDisable();
+    FPULazyStackingEnable();
+
+    // Start the system timer
+
 }
 
-/**
- * ============================================================================
- * ============================================================================
- */
 
 /**
  * Computes the next state of the system state machine
@@ -563,7 +566,7 @@ void sys_init()
 tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
     // If set, is in the startup sequence vs. normal operation
     static bool bInStartup;
-    static uint32 ui32CellSampleCount = 0;
+    static uint32_t ui32CellSampleCount = 0;
     static bool bThermo2;
 
     // revert to the start sequence if needed
@@ -573,15 +576,16 @@ tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
     // just walk through the sequence
     if(bInStartup) {
         switch(eNow) {
-            case INITIALIZE:    return TEST;
-            case TEST:          return FAULT_CLEAR;
-            case FAULT_CLEAR:   return RESET;
-            case RESET:         return AUX_SAMPLE;
+            case INITIALIZE:    return RESET;
+            case RESET:         return FAULT_CLEAR;
+            case FAULT_CLEAR:   return TEST;
+            case TEST:          return AUX_SAMPLE;
             case AUX_SAMPLE:    return CELL_SAMPLE;
             case CELL_SAMPLE:   return CURRENT_READ;
             case CURRENT_READ:  return AUX_READ;
             case AUX_READ:      return CELL_READ;
-            case CELL_READ:     return THERM1_SAMPLE;
+            case CELL_READ:     return VOLT_FAULTS;
+            case VOLT_FAULTS:   return THERM1_SAMPLE;
             case THERM1_SAMPLE: return THERM1_READ;
             case THERM1_READ:   return THERM2_SAMPLE;
             case THERM2_SAMPLE: return THERM2_READ;
@@ -608,7 +612,8 @@ tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
                 else if(bThermo2)               return THERM2_READ;
                 else                            return THERM1_READ;
 
-            case CELL_READ:     return BRANCH_PONT;
+            case CELL_READ:     return VOLT_FAULTS;
+            case VOLT_FAULTS:   return BRANCH_PONT;
 
             case BRANCH_PONT:
                 if(ui32CellSampleCount > SYSTEM_THERMO_PART) {
@@ -634,12 +639,306 @@ tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
                 bThermo2 = true;
                 return CURRENT_READ;
 
-            case THERM2_SAMPLE: return BRANCH_PONT;
+            case THERM2_READ:   return THERM_FAULTS;
+            case THERM_FAULTS:  return BRANCH_PONT;
 
         }
     }
+
+    // Shouldn't get here, if we do, it's a state machine error
+    return INVALID;
 }
 
+
+
+void system_parseThermo2() {
+    uint32_t ui32BufSize = g_psConfig->ui32NumBQModules*(BQ_NUM_THERMISTOR/2);
+    uint16_t pui16Buf[ui32BufSize];
+
+    float fTmpVolt;
+    if(bq76_readSampledVoltages(pui16Buf, ui32BufSize)) {
+
+        // For each module's data
+        for(uint32_t i=0; i<g_psConfig->ui32NumBQModules; i++) {
+
+            // for each thermistor sample in that module
+            for(uint32_t j=0; j<BQ_NUM_THERMISTOR/2; j++) {
+
+                // determine the voltage of that sample
+                fTmpVolt = BQ_ADC_TO_VOLT_FRAC(pui16Buf[j + i*BQ_NUM_THERMISTOR/2]);
+
+                // convert that volt fraction to a temperature, and copy to the
+                // right spot in the temperature buffer
+                g_pfThermoTemperatures[j + i*BQ_NUM_THERMISTOR + BQ_NUM_THERMISTOR/2] =
+                        calc_thermistorTemp(fTmpVolt, &g_psConfig->sThermoParams);
+            }
+        }
+    } else {
+        // TODO: throw a comm fault, maybe something more
+        tFaultInfo sInfo;
+        sInfo.bAsserted = true;
+        sInfo.ui64TimeFlagged = util_usecs();
+        sInfo.data.ui32 = 0;
+        fault_setFault(FAULT_BQ_COM, sInfo);
+    }
+}
+
+
+
+void system_parseThermo1() {
+    uint32_t ui32BufSize = g_psConfig->ui32NumBQModules*(BQ_NUM_THERMISTOR/2);
+    uint16_t pui16Buf[ui32BufSize];
+
+    float fTmpVolt;
+    if(bq76_readSampledVoltages(pui16Buf, ui32BufSize)) {
+
+        // For each module's data
+        for(uint32_t i=0; i<g_psConfig->ui32NumBQModules; i++) {
+
+            // for each thermistor sample in that module
+            for(uint32_t j=0; j<BQ_NUM_THERMISTOR/2; j++) {
+
+                // determine the voltage of that sample
+                fTmpVolt = BQ_ADC_TO_VOLT_FRAC(pui16Buf[j + i*BQ_NUM_THERMISTOR/2]);
+
+                // convert that volt fraction to a temperature, and copy to the
+                // right spot in the temperature buffer
+                g_pfThermoTemperatures[j + i*BQ_NUM_THERMISTOR] =
+                        calc_thermistorTemp(fTmpVolt, &g_psConfig->sThermoParams);
+            }
+        }
+    } else {
+        // TODO: throw a comm fault, maybe something more
+        tFaultInfo sInfo;
+        sInfo.bAsserted = true;
+        sInfo.ui64TimeFlagged = util_usecs();
+        sInfo.data.ui32 = 0;
+        fault_setFault(FAULT_BQ_COM, sInfo);
+    }
+}
+
+
+
+void system_parseCells() {
+    uint32_t ui32BufSize = config_totalNumcells(g_psConfig);
+    uint16_t pui16Buf[ui32BufSize];
+
+    if(bq76_readSampledVoltages(pui16Buf, ui32BufSize)) {
+        for(uint32_t i=0; i<ui32BufSize; i++)
+            g_pfCellVoltages[i] = BQ_ADC_TO_VOLTS(pui16Buf[i]);
+    } else {
+        // TODO: throw a comm fault, maybe something more
+        tFaultInfo sInfo;
+        sInfo.bAsserted = true;
+        sInfo.ui64TimeFlagged = util_usecs();
+        sInfo.data.ui32 = 0;
+        fault_setFault(FAULT_BQ_COM, sInfo);
+    }
+}
+
+
+
+void system_parseAux() {
+    uint32_t pv, t1, t2, t3;
+
+    // wait for the sample to finish
+    while(!ioctl_sampledAux(&pv, &t1, &t2, &t3))
+        ;
+
+    g_fPackVoltage = calc_packVoltageFromADC(pv);
+
+    g_pfThermoTemperatures[0] = calc_thermistorTemp(
+            IOCTL_ADC_TO_VOLT_FRAC(t1),
+            &g_psConfig->sThermoParams);
+
+    g_pfThermoTemperatures[1] = calc_thermistorTemp(
+            IOCTL_ADC_TO_VOLT_FRAC(t2),
+            &g_psConfig->sThermoParams);
+
+    g_pfThermoTemperatures[2] = calc_thermistorTemp(
+            IOCTL_ADC_TO_VOLT_FRAC(t3),
+            &g_psConfig->sThermoParams);
+}
+
+
+
+
+void system_determineOutputs() {
+    uint8_t ui8FaultLevel = fault_getLevel();
+    uint32_t ui32FaultMask = fault_getFaultsSet();
+
+    if(g_bEnable) {
+        switch (ui8FaultLevel) {
+        case 0:
+        case 1:
+        case 2:
+            ioctl_setAll(false);
+            break;
+        case 3: {
+            bool bEnChg = !(ui32FaultMask & FAULT_L3_CHARGE_RELAY_TRIGGERS);
+            bool bEnDis = !(ui32FaultMask & FAULT_L3_DISCHARGE_RELAY_TRIGGERS);
+
+            ioctl_setChargeMain(bEnChg);
+            ioctl_setChargeAux(bEnChg);
+            ioctl_setPrechargeMain(bEnChg);
+            ioctl_setPrechargeAux(bEnChg);
+            ioctl_setDischargeMain(bEnDis);
+            ioctl_setDischargeAux(bEnDis);
+            ioctl_setBattNegMain(true);
+            ioctl_setBattNegAux(true);
+            break;
+        }
+        case 4:
+        case 5:
+            ioctl_setAll(true);
+            break;
+        default:
+            // We shouldn't be here...
+            // TODO: set a flag and soft lock for debugging
+            break;
+        }
+    } else
+        ioctl_setAll(false);
+}
+
+
+
+void system_voltFaults() {
+    float fMinV = 10.0, fMaxV = -1.0;
+    float fPVFromCells = 0;
+
+    uint32_t ui32MaxIdx, ui32MinIdx;
+    uint32_t ui32NumCells = config_totalNumcells(g_psConfig);
+
+    tFaultInfo sTempFaultInfo;
+    sTempFaultInfo.bAsserted = true;
+    sTempFaultInfo.ui64TimeFlagged = util_usecs();
+
+    float fVolts;
+    for(uint32_t i=0; i<ui32NumCells; i++) {
+        fVolts = g_pfCellVoltages[i];
+        fPVFromCells += fVolts;
+
+        // Get min / max voltages
+        if(fVolts < fMinV) {
+            fMinV = fVolts;
+            ui32MinIdx = i;
+        } else if(fVolts > fMaxV) {
+            fMaxV = fVolts;
+            ui32MaxIdx = i;
+        }
+
+        // Throw cell uv / ov faults if needed
+        sTempFaultInfo.data.ui32 = i;
+        if(fVolts < g_psConfig->fCellUVFaultVoltage)
+            fault_setFault(FAULT_CELL_UNDER_VOLTAGE, sTempFaultInfo);
+
+        else if(fVolts > g_psConfig->fCellOVFaultVoltage)
+            fault_setFault(FAULT_CELL_OVER_VOLTAGE, sTempFaultInfo);
+        }
+
+    // Check for imbalance
+    if(fMaxV - fMinV > g_psConfig->fCellImbalanceThresh) {
+        sTempFaultInfo.data.pui16[0] = ui32MinIdx;
+        sTempFaultInfo.data.pui16[1] = ui32MaxIdx;
+        fault_setFault(FAULT_IMBALANCED, sTempFaultInfo);
+    }
+
+    // Check for disagree
+    if(fabs(fPVFromCells - g_fPackVoltage) > g_psConfig->fPVDisagree) {
+        sTempFaultInfo.data.ui32 = 1000.0 * fabs(fPVFromCells - g_fPackVoltage);
+        fault_setFault(FAULT_PACK_VOLTAGE_DISAGREE, sTempFaultInfo);
+    }
+
+    // Check pack voltage range
+    if(g_fPackVoltage > g_psConfig->fMaxPackVoltage) {
+        sTempFaultInfo.data.ui32 = g_fPackVoltage * 1000;
+        fault_setFault(FAULT_PACK_OVER_VOLTAGE, sTempFaultInfo);
+    } else if(g_fPackVoltage < g_psConfig->fMinPackVoltage) {
+        sTempFaultInfo.data.ui32 = g_fPackVoltage * 1000;
+        fault_setFault(FAULT_PACK_UNDER_VOLTAGE, sTempFaultInfo);
+    }
+
+    // check SOC
+    if(g_fSOC > g_psConfig->fOChgSoc) {
+        sTempFaultInfo.data.ui32 = g_fSOC * 1000;
+        fault_setFault(FAULT_OVER_CHARGE, sTempFaultInfo);
+    } else if(g_fSOC < g_psConfig->fUChgSoc) {
+        sTempFaultInfo.data.ui32 = g_fSOC * 1000;
+        fault_setFault(FAULT_OVER_DISCHARGE, sTempFaultInfo);
+    }
+}
+
+
+
+void system_currentFaults() {
+    // Template fault information
+        tFaultInfo sTempFaultInfo;
+        sTempFaultInfo.bAsserted = true;
+        sTempFaultInfo.ui64TimeFlagged = util_usecs();
+
+        uint64_t ui64Now = util_usecs();
+
+        // Current faults, set the template fault info to just read abs(milliamps)
+        sTempFaultInfo.data.ui32 = 1000 * fabs(g_fCurrent);
+
+        // Short circuit current, immediately assert the fault
+        if(fabs(g_fCurrent) > g_psConfig->fOCShortAmps)
+            fault_setFault(FAULT_PACK_SHORT, sTempFaultInfo);
+
+        // Discharge too high, make sure it has been sustained for long enough
+        // to rule out startup transients
+        if(g_fCurrent > g_psConfig->fOCDischgFaultAmps)
+            fault_setFault(FAULT_TRANSIENT_DISCHG_OC, sTempFaultInfo);
+
+        else // possible transient issue is no longer present, so reset
+            fault_clearFault(FAULT_TRANSIENT_DISCHG_OC);
+
+
+        // Charge current too high, make sure it has been sustained for long enough
+        // to rule out startup transients
+        if(g_fCurrent < -g_psConfig->fOCDischgFaultAmps)
+            fault_setFault(FAULT_TRANSIENT_CHG_OC, sTempFaultInfo);
+
+        else // possible transient issue is no longer present, so reset
+            fault_clearFault(FAULT_TRANSIENT_CHG_OC);
+
+        // Check if the transient faults have been active long enough to upgrade
+        uint64_t ui64TimeTrans;
+        bool bChgOC =
+                fault_timeAsserted(FAULT_TRANSIENT_CHG_OC, &ui64TimeTrans) &&
+                ui64Now - ui64TimeTrans > g_psConfig->ui32OCShortUsecs;
+
+        bool bDischgOC =
+                fault_timeAsserted(FAULT_TRANSIENT_DISCHG_OC, &ui64TimeTrans) &&
+                ui64Now - ui64TimeTrans > g_psConfig->ui32OCShortUsecs;
+
+        if(bChgOC)
+            fault_setFault(FAULT_OVER_CURRENT_CHG, sTempFaultInfo);
+
+        if(bDischgOC)
+            fault_setFault(FAULT_OVER_CURRENT_DISCHG, sTempFaultInfo);
+}
+
+
+
+void system_thermFaults() {
+    uint32_t ui32NTherm = 3 + g_psConfig->ui32NumBQModules * BQ_NUM_THERMISTOR;
+
+    // Template fault information
+    tFaultInfo sTempFaultInfo;
+    sTempFaultInfo.bAsserted = true;
+    sTempFaultInfo.ui64TimeFlagged = util_usecs();
+
+    for(uint32_t i=0; i<ui32NTherm; i++) {
+        sTempFaultInfo.data.ui32 = i;
+        if(g_pfThermoTemperatures[i] < g_psConfig->fPackUTFaultTemp)
+            fault_setFault(FAULT_UNDER_TEMP, sTempFaultInfo);
+
+        if(g_pfThermoTemperatures[i] > g_psConfig->fPackOTFaultTemp)
+            fault_setFault(FAULT_OVER_TEMP, sTempFaultInfo);
+    }
+}
 
 
 

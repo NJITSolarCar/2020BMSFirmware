@@ -107,11 +107,13 @@ void system_abort();
 void system_initialize();
 void system_reset();
 void system_self_test();
-void system_determine_faults();
-void system_determine_outputs();
-void system_parseCells(uint16_t *pui16Samples, uint32_t ui32bufSize);
-void system_parseThermo1(uint16_t *pui16Samples, uint32_t ui32bufSize);
-void system_parseThermo2(uint16_t *pui16Samples, uint32_t ui32bufSize);
+void system_determineOutputs();
+void system_parseCells();
+void system_parseThermo1();
+void system_parseThermo2();
+void system_voltFaults();
+void system_thermFaults();
+void system_currentFaults();
 
 tSystemState system_nextState(tSystemState eNow, bool *pbDataValid);
 
