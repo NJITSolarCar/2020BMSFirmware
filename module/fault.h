@@ -129,6 +129,13 @@ uint8_t fault_getPersistentFaults(uint32_t *pui32FaultSum, uint32_t *pui32Data);
 uint8_t fault_writePersistentFaults(uint32_t *pui32FaultSum, uint32_t *pui32Data);
 
 
+/**
+ * Determines the output relay status based on the current fault status. This
+ * does not take the system's enabled state, or data validity into account; the
+ * results returned from here depend only on the faults currently asserted.
+ */
+void fault_determineRelays(bool *pbBatNeg, bool *pbChg, bool *pbDisch);
+
 
 void fault_clearNonPersistent();
 

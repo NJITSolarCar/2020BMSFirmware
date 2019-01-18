@@ -14,19 +14,17 @@
 #ifndef BQ76_H_
 #define BQ76_H_
 
-#include "system.h"
 #include <stdint.h>
 #include <stdbool.h>
+
+#include "types.h"
+
+#define BQ_MAX_SAMPLE           16 // Maximum number of samples per module in a single read
+#define BQ_MAX_NUM_MODULE       16
 
 #define BQ_NUM_THERMISTOR       16
 #define BQ_WRITE_NORESP_TIMEOUT 250 // usecs
 #define BQ_WRITE_RESP_TIMEOUT   2000 // usecs
-
-// Sampling modes
-#define BQ_SAMPLE_INVALID       0
-#define BQ_SAMPLE_CELL          1
-#define BQ_SAMPLE_THERMO1       2
-#define BQ_SAMPLE_THERMO2       3
 
 // Frame initialization byte settings
 #define BQ_FRM_TYPE_RESPONSE    0x00 // Response Frame
@@ -101,11 +99,31 @@
 #define BQ_ADC_TO_VOLT_FRAC(x)  ((1.0/65536.0) * ((float)(x)))
 
 
+// Defines the type of BQ asynchronous sample being performed
+typedef enum {
+    NONE,
+    CELL,
+    THERM1,
+    THERM2
+} tSampleType;
+
+
 /*
  * Initialization
  */
-void bq76_connect();
-uint8_t bq76_autoAddress();
+
+// Establishes a UART connection to the BQ76 stack. Returns true if successful
+bool bq76_connect();
+
+// Assigns addresses to the BQ76 modules on the stack. Returns the number of
+// modules found and addressed. The highest address will be 1 1 the value
+// returned.
+uint32_t bq76_autoAddress();
+
+
+// Applies all of the configuration data to the BQ76 stack. Returns true on
+// success
+bool bq76_applyConfig(tConf *psConfig);
 
 
 /*
@@ -177,6 +195,10 @@ uint8_t bq76_startThermoSample(bool bMuxState);
 uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
 uint32_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint32_t ui32BufSize);
 
+// If a sample sequence is running, checks the BQ76 stack to see if the sample
+// is complete, and returns true if it is complete on all modules. If one or
+// more modules is not finished, or no sequence is running, this returns false.
+bool bq76_samplingDone();
 
 /**
  * Reads the aggregate fault status of each bq76 module on the stack. Returns
@@ -205,6 +227,23 @@ uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
 uint8_t bq76_enabled();
 
 ///////////////////////////////////////////////////////////
-bool bq76_isSampling();
+tSampleType bq76_samplingMode();
+void bq76_faultISR();
+void bq76_setReadDoneVector(uint32_t ui32Vector);
+
+/**
+ * Converts the data in the UART read buffer to sampled voltages.
+ * Returns a 2d array of data, with each row being a bq76 module and
+ * each column being a sample slot. pbDataValid lists whether each
+ * module's data is valid. If a checksum error or other issue occurs,
+ * this will be false, otherwise true. pui32nSampes is an array that
+ * tells how many samples were read for each module, and pui32nModules
+ * tells how many modules were read. Returns true if voltage data
+ * was read from the buffer, false otherwise
+ */
+bool bq76_readBufToVoltages(uint32_t ppui32Buf[][BQ_MAX_SAMPLE],
+                            bool *pbDataValid,
+                            uint32_t *pui32nSamples,
+                            uint32_t *pui32nModules);
 
 #endif /* BQ76_H_ */

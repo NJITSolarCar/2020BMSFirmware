@@ -16,11 +16,48 @@
 #include <driverlib/adc.h>
 
 #include <inc/hw_memmap.h>
+#include <inc/hw_ints.h>
 
 /** General use peripherals */
-#define PINCFG_PV_TIMER                 TIMER1_BASE
-#define PINCFG_THERM_TIMER              TIMER2_BASE
-#define PINCFG_SYSTIME_TIMER            WTIMER0_BASE
+#define PINCFG_TIMER_SYSTIME            WTIMER0_BASE
+#define PINCFG_TIMER_PART_SYSTIME       TIMER_BOTH
+#define PINCFG_TIMER_CFG_SYSTIME        TIMER_CFG_ONE_SHOT_UP
+
+#define PINCFG_TIMER_PV                 WTIMER1_BASE
+#define PINCFG_TIMER_PART_PV            TIMER_A
+#define PINCFG_TIMER_CFG_PV             TIMER_CFG_A_PERIODIC
+
+#define PINCFG_TIMER_MCU_THERM          WTIMER1_BASE
+#define PINCFG_TIMER_PART_MCU_THERM     TIMER_B
+#define PINCFG_TIMER_CFG_MCU_THERM      TIMER_CFG_B_PERIODIC
+
+#define PINCFG_TIMER_BQ_SAMPLE          WTIMER2_BASE
+#define PINCFG_TIMER_PART_BQ_SAMPLE     TIMER_A
+#define PINCFG_TIMER_CFG_BQ_SAMPLE      TIMER_CFG_A_PERIODIC
+
+#define PINCFG_TIMER_CURRSEN            WTIMER2_BASE
+#define PINCFG_TIMER_PART_CURRSEN       TIMER_B
+#define PINCFG_TIMER_CFG_CURRSEN        TIMER_CFG_B_PERIODIC
+
+// Interrupt vector numbers
+#define PINCFG_VEC_CURRSEN              INT_ADC0SS1
+#define PINCFG_VEC_PV_READ              INT_ADC1SS3
+#define PINCFG_VEC_MCU_THERM            INT_ADC1SS1
+#define PINCFG_VEC_CAN_RX               INT_CAN0
+#define PINCFG_VEC_RS485_RX             INT_UART2
+#define PINCFG_VEC_BQUART               INT_UART4
+#define PINCFG_VEC_BQFAULT              INT_GPIOF
+#define PINCFG_VEC_BQ_SAMPLE_TIMER      INT_WTIMER2A
+
+// Trigger ISR vectors
+#define PINCFG_VEC_CURRSEN_TRIG         INT_WTIMER2B
+#define PINCFG_VEC_PV_READ_TRIG         INT_WTIMER1A
+#define PINCFG_VEC_MCU_THERM_TRIG       INT_WTIMER1B
+
+// IRQ25 is unused by hardware on this device. It can still function as a
+// SoftWare triggered Interrupt (SWI)
+#define PINCFG_VEC_BQPARSE              25
+
 
 /** General Purpose pins */
 
@@ -60,9 +97,9 @@
 #define PINCFG_CANSTB_PIN               GPIO_PIN_4
 
 // User Switch
-#define PINCFG_USERSWITCH_PORT          GPIO_PORTB_BASE
-#define PINCFG_USERSWITCH_PIN           GPIO_PIN_5
-#define PINCFG_USERSWITCH_INT_LEVEL     GPIO_FALLING_EDGE
+#define PINCFG_SW1_PORT                 GPIO_PORTB_BASE
+#define PINCFG_SW1_PIN                  GPIO_PIN_5
+#define PINCFG_SW1_INT_LEVEL            GPIO_FALLING_EDGE
 
 // Debug LEDs
 #define PINCFG_DEBUGLED1_PORT           GPIO_PORTD_BASE
@@ -101,8 +138,8 @@
 /** Analog Inputs */
 
 // Module data
-#define PINCFG_CURRENTSENSE_MODULE      ADC0_BASE
-#define PINCFG_CURRENTSENSE_SEQUENCE    1
+#define PINCFG_CURRSEN_MODULE           ADC0_BASE
+#define PINCFG_CURRSEN_SEQUENCE         1
 
 #define PINCFG_AUX_MODULE               ADC1_BASE
 #define PINCFG_PV_SEQUENCE              3

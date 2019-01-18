@@ -48,7 +48,6 @@ typedef union {
 // Additional information about asserted faults
 typedef struct
 {
-    bool bAsserted;
     uint64_t ui64TimeFlagged;
     tFaultData data;
 } tFaultInfo;
@@ -68,11 +67,9 @@ typedef struct
     float fFirstSampleTime;
     float fOtherSampleTime;
 
+    // Population settings
     uint8_t ui8NumCells;
-
-    // Comm timeouts
-    uint32_t ui32WriteNoRespTimeout;
-    uint32_t ui32WriteRespTimeout;
+    uint16_t ui16ThermoMask;
 } tBQBoardCal;
 
 

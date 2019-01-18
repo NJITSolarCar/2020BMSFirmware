@@ -29,6 +29,7 @@
 #include <driverlib/i2c.h>
 #include <driverlib/fpu.h>
 #include <driverlib/timer.h>
+#include <driverlib/interrupt.h>
 
 #include <inc/hw_memmap.h>
 
@@ -430,9 +431,56 @@ void system_tick(uint64_t ui64NumCalls) {
  * ============================================================================
  */
 
-void system_initialize()
-{
+// This will be called when a BQ analog read request completes
+void system_isr_bqSampleRead() {
+    tSampleType eMode = bq76_samplingMode();
 
+    IntPendClear(IOCTL_VEC_BQDONE);
+
+    switch(eMode) {
+    case CELL :
+        g_pfCellVoltagesValid = system_parseCells();
+        break;
+
+    case THERM1 :
+        g_pfTherm1Valid = system_parseTherm1();
+        break;
+
+    case THERM2 :
+        g_pfTherm2Valid = system_parseTherm2();
+        break;
+
+    default:
+        // TODO: Throw software fault
+        break;
+    }
+}
+
+
+
+// Called periodically to trigger a BQ sample
+void system_isr_bqSampleTimer() {
+    static uint32_t ui32Cnt = 0;
+    bool bStarted = false;
+
+    TimerIntClear(PINCFG_BQ_SAMPLE_TIMER, TIMER_TIMA_TIMEOUT);
+
+    // Do the first half of thermo samples
+    if(ui32Cnt % SYSTEM_BQ_THERMO_PART == 0)
+        bStarted = bq76_startThermoSample(false);
+
+    // we just did the first half last time, now onto the second half
+    else if(ui32Cnt+1 % SYSTEM_BQ_THERMO_PART == 0)
+        bStarted = bq76_startThermoSample(true);
+
+    // Default to voltage sample
+    else
+        bStarted = bq76_StartCellVoltageSample();
+
+    // It's possible reading a sample took too long and we aren't ready for
+    // the next one. In that case, don't advance the counter
+    if(bStarted)
+        ui32Cnt++;
 }
 
 
@@ -527,7 +575,7 @@ tSystemState system_nextState(tSystemState eNow, bool *pbDataValid) {
 
 
 
-void system_parseThermo2() {
+bool system_parseTherm2() {
     uint32_t ui32BufSize = g_psConfig->ui32NumBQModules*(BQ_NUM_THERMISTOR/2);
     uint16_t pui16Buf[ui32BufSize];
 
@@ -549,19 +597,16 @@ void system_parseThermo2() {
                         calc_thermistorTemp(fTmpVolt, &g_psConfig->sThermoParams);
             }
         }
-    } else {
-        // TODO: throw a comm fault, maybe something more
-        tFaultInfo sInfo;
-        sInfo.bAsserted = true;
-        sInfo.ui64TimeFlagged = util_usecs();
-        sInfo.data.ui32 = 0;
-        fault_setFault(FAULT_BQ_COM, sInfo);
+
+        return true;
     }
+
+    return false;
 }
 
 
 
-void system_parseThermo1() {
+bool system_parseTherm1() {
     uint32_t ui32BufSize = g_psConfig->ui32NumBQModules*(BQ_NUM_THERMISTOR/2);
     uint16_t pui16Buf[ui32BufSize];
 
@@ -583,59 +628,28 @@ void system_parseThermo1() {
                         calc_thermistorTemp(fTmpVolt, &g_psConfig->sThermoParams);
             }
         }
-    } else {
-        // TODO: throw a comm fault, maybe something more
-        tFaultInfo sInfo;
-        sInfo.bAsserted = true;
-        sInfo.ui64TimeFlagged = util_usecs();
-        sInfo.data.ui32 = 0;
-        fault_setFault(FAULT_BQ_COM, sInfo);
+
+        return true;
     }
+
+    return false;
 }
 
 
 
-void system_parseCells() {
+bool system_parseCells() {
     uint32_t ui32BufSize = config_totalNumcells(g_psConfig);
     uint16_t pui16Buf[ui32BufSize];
 
     if(bq76_readSampledVoltages(pui16Buf, ui32BufSize)) {
         for(uint32_t i=0; i<ui32BufSize; i++)
             g_pfCellVoltages[i] = BQ_ADC_TO_VOLTS(pui16Buf[i]);
-    } else {
-        // TODO: throw a comm fault, maybe something more
-        tFaultInfo sInfo;
-        sInfo.bAsserted = true;
-        sInfo.ui64TimeFlagged = util_usecs();
-        sInfo.data.ui32 = 0;
-        fault_setFault(FAULT_BQ_COM, sInfo);
+
+        return true;
     }
+
+    return false;
 }
-
-
-
-void system_parseAux() {
-    uint32_t pv, t1, t2, t3;
-
-    // wait for the sample to finish
-    while(!ioctl_sampledAux(&pv, &t1, &t2, &t3))
-        ;
-
-    g_fPackVoltage = calc_packVoltageFromADC(pv);
-
-    g_pfThermoTemperatures[0] = calc_thermistorTemp(
-            IOCTL_ADC_TO_VOLT_FRAC(t1),
-            &g_psConfig->sThermoParams);
-
-    g_pfThermoTemperatures[1] = calc_thermistorTemp(
-            IOCTL_ADC_TO_VOLT_FRAC(t2),
-            &g_psConfig->sThermoParams);
-
-    g_pfThermoTemperatures[2] = calc_thermistorTemp(
-            IOCTL_ADC_TO_VOLT_FRAC(t3),
-            &g_psConfig->sThermoParams);
-}
-
 
 
 

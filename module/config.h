@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "types.h"
+
 ///////////////////////////////// DEFAULT CONFIGURATIONS //////////////////////////////
 #define CONF_DEFAULT_NUM_CELLS                  16
 #define CONF_DEFAULT_COLLATE_CELL_SAMPLES       true
