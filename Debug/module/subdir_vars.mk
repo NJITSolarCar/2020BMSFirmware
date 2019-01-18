@@ -6,6 +6,7 @@ SHELL = cmd.exe
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../module/bq.c \
 ../module/bq76.c \
 ../module/iocontrol.c \
 ../module/main.c \
@@ -13,6 +14,7 @@ C_SRCS += \
 ../module/system.c 
 
 C_DEPS += \
+./module/bq.d \
 ./module/bq76.d \
 ./module/iocontrol.d \
 ./module/main.d \
@@ -20,6 +22,7 @@ C_DEPS += \
 ./module/system.d 
 
 OBJS += \
+./module/bq.obj \
 ./module/bq76.obj \
 ./module/iocontrol.obj \
 ./module/main.obj \
@@ -27,6 +30,7 @@ OBJS += \
 ./module/system.obj 
 
 OBJS__QUOTED += \
+"module\bq.obj" \
 "module\bq76.obj" \
 "module\iocontrol.obj" \
 "module\main.obj" \
@@ -34,6 +38,7 @@ OBJS__QUOTED += \
 "module\system.obj" 
 
 C_DEPS__QUOTED += \
+"module\bq.d" \
 "module\bq76.d" \
 "module\iocontrol.d" \
 "module\main.d" \
@@ -41,6 +46,7 @@ C_DEPS__QUOTED += \
 "module\system.d" 
 
 C_SRCS__QUOTED += \
+"../module/bq.c" \
 "../module/bq76.c" \
 "../module/iocontrol.c" \
 "../module/main.c" \

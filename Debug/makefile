@@ -12,6 +12,7 @@ GEN_CMDS__FLAG :=
 ORDERED_OBJS += \
 "./tm4c1230h6pm_startup_ccs.obj" \
 "./tm4c123gh6pm_startup_ccs.obj" \
+"./module/bq.obj" \
 "./module/bq76.obj" \
 "./module/iocontrol.obj" \
 "./module/main.obj" \
@@ -163,8 +164,8 @@ all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq76.obj" "module\iocontrol.obj" "module\main.obj" "module\sys.obj" "module\system.obj" 
-	-$(RM) "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq76.d" "module\iocontrol.d" "module\main.d" "module\sys.d" "module\system.d" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq.obj" "module\bq76.obj" "module\iocontrol.obj" "module\main.obj" "module\sys.obj" "module\system.obj" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq.d" "module\bq76.d" "module\iocontrol.d" "module\main.d" "module\sys.d" "module\system.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

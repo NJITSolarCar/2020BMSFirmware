@@ -1,5 +1,5 @@
 /*
- * bq76.h
+ * bq.h
  *
  * Contains Drivers for the BQ76PL455A Battery Management IC. The stack of
  * these forms the core functionality of the BMS, and the connection to the
@@ -7,17 +7,15 @@
  * functionalities, such as reading cell and pack voltages, detecting cell
  * faults, and passive balancing.
  *
- *  Created on: Nov 10, 2018
+ *  Created on: Jan 18, 2019
  *      Author: Duemmer
  */
 
-#ifndef BQ76_H_
-#define BQ76_H_
+#ifndef BQ_H_
+#define BQ_H_
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "types.h"
 
 #define BQ_MAX_SAMPLE           16 // Maximum number of samples per module in a single read
 #define BQ_MAX_NUM_MODULE       16
@@ -98,6 +96,9 @@
 #define BQ_ADC_TO_VOLTS(x)      ((BQ_ADC_VMAX/65536.0) * ((float)(x)))
 #define BQ_ADC_TO_VOLT_FRAC(x)  ((1.0/65536.0) * ((float)(x)))
 
+// Macro to determine the expected timeout on a command
+#define BQ_WRITE_TIMEOUT          (g_bCmdHasResponse ? BQ_WRITE_RESP_TIMEOUT : BQ_WRITE_NORESP_TIMEOUT)
+
 
 // Defines the type of BQ asynchronous sample being performed
 typedef enum {
@@ -118,7 +119,7 @@ bool bq76_connect();
 // Assigns addresses to the BQ76 modules on the stack. Returns the number of
 // modules found and addressed. The highest address will be 1 1 the value
 // returned.
-uint32_t bq76_autoAddress();
+bool bq76_autoAddress(uint32_t ui32nModules);
 
 
 // Applies all of the configuration data to the BQ76 stack. Returns true on
@@ -137,30 +138,30 @@ bool bq76_write(
         uint8_t ui8Addr,
         uint8_t *pui8data);
 
-uint8_t bq76_writeRegMultiple(
+// Writes data to a BQ76 register. The device is selected
+// with ui8Flags and ui8Addr. Register address is ui16Reg, and the
+// data to write is specified by puiData and ui8Len
+bool bq76_writeReg(
         uint8_t ui8Flags,
         uint8_t ui8Addr,
         uint16_t ui16Reg,
-        uint8_t *pui8Data,
-        uint8_t ui8DataLength);
+        uint8_t ui8Len,
+        uint8_t *pui8Data);
 
-uint8_t bq76_writeRegSingle(
-        uint8_t ui8Flags,
-        uint8_t ui8Addr,
-        uint16_t ui16Reg,
-        uint8_t ui8Data);
-
+// Reads a register from a single device at address ui8Addr, from the register
+// at ui16Reg, to pui8Data. The amount of bytes read is ui8Len
 uint8_t bq76_readRegSingle(
         uint8_t ui8Addr,
         uint16_t ui16Reg,
         uint8_t ui8Len,
-        uint8_t *pui8Response);
+        uint8_t *pui8Data);
 
-uint8_t bq76_waitResponse(uint32_t ui32Timeout);
-void bq76_waitResponse();
+// Waits until the readInProgress flag goes low, or the correct time out occurs
+bool bq76_waitResponse();
 
-uint8_t bq76_parseResponse(uint8_t ui8Start, uint8_t *pui8Len);
-uint8_t bq76_parseMultiple(
+// Extracts useful data from a populated read buffer
+bool bq76_parseResponse(uint8_t ui8Start, uint8_t *pui8Len);
+bool bq76_parseMultiple(
         uint8_t ui8NumResponses,
         uint8_t *pui8StartPtrs,
         uint8_t *pui8Lengths,
@@ -195,7 +196,6 @@ uint8_t bq76_StartCellVoltageSample();
 uint8_t bq76_startThermoSample(bool bMuxState);
 
 uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
-uint32_t bq76_readSampledVoltages(uint16_t *pui16Buf, uint32_t ui32BufSize);
 
 // If a sample sequence is running, checks the BQ76 stack to see if the sample
 // is complete, and returns true if it is complete on all modules. If one or
@@ -222,16 +222,22 @@ bool bq76_faultPinActive();
  */
 uint8_t bq76_readThermistors(uint16_t *pui16Buf);
 
+// Should be called when a fault is triggered by the BMS on the MCU
+void bq76_faultISR();
+
+
 /*
  * Utility
  */
 uint16_t bq76_checksum(uint8_t *pui8Buf, uint16_t ui16Len);
-uint8_t bq76_enabled();
+bool bq76_enabled();
+
+void bq76_setReadDoneVector(uint32_t ui32Vector);
+void bq76_setUARTBase(uint32_t ui32Base);
+void bq76_setWTimer(uint32_t ui32WTimerBase);
 
 ///////////////////////////////////////////////////////////
 tSampleType bq76_samplingMode();
-void bq76_faultISR();
-void bq76_setReadDoneVector(uint32_t ui32Vector);
 
 /**
  * Converts the data in the UART read buffer to sampled voltages.
@@ -248,4 +254,4 @@ bool bq76_readBufToVoltages(uint32_t ppui32Buf[][BQ_MAX_SAMPLE],
                             uint32_t *pui32nSamples,
                             uint32_t *pui32nModules);
 
-#endif /* BQ76_H_ */
+#endif /* BQ_H_ */
