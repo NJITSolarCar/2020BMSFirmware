@@ -68,7 +68,6 @@ typedef struct
     float fOtherSampleTime;
 
     // Population settings
-    uint8_t ui8NumCells;
     uint16_t ui16ThermoMask;
 } tBQBoardCal;
 
@@ -139,6 +138,7 @@ typedef struct
 
     // BQ Configurations
     uint32_t ui32NumBQModules;
+    uint32_t ui32nCells;
     tBQBoardCal bqCals[CONF_MAX_BQ_MODULES];
 
     // polynomial to scale voltage to SOC

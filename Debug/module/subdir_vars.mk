@@ -2,8 +2,6 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
-SHELL = cmd.exe
-
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../module/bq.c \
@@ -30,20 +28,20 @@ OBJS += \
 ./module/system.obj 
 
 OBJS__QUOTED += \
-"module\bq.obj" \
-"module\bq76.obj" \
-"module\iocontrol.obj" \
-"module\main.obj" \
-"module\sys.obj" \
-"module\system.obj" 
+"module/bq.obj" \
+"module/bq76.obj" \
+"module/iocontrol.obj" \
+"module/main.obj" \
+"module/sys.obj" \
+"module/system.obj" 
 
 C_DEPS__QUOTED += \
-"module\bq.d" \
-"module\bq76.d" \
-"module\iocontrol.d" \
-"module\main.d" \
-"module\sys.d" \
-"module\system.d" 
+"module/bq.d" \
+"module/bq76.d" \
+"module/iocontrol.d" \
+"module/main.d" \
+"module/sys.d" \
+"module/system.d" 
 
 C_SRCS__QUOTED += \
 "../module/bq.c" \

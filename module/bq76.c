@@ -27,6 +27,8 @@ static bool g_bCmdInProgress = false; // If true, a command is currently in prog
 
 static bool g_bCmdHasResponse = false; // If true, the current command expects a response
 
+static tSampleType g_sSampleType = NONE; // Current voltage sampling mode
+
 // MCU peripheral data
 static uint32_t g_ui32ReadDoneVec; // IRQ vector number to trigger when a UART read is finished
 static uint32_t g_ui32UARTBase; // Base address of the UART peripheral used for bq76 communications
@@ -433,8 +435,8 @@ bool bq76_autoAddress(uint32_t ui32nModules) {
         BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
         ui32nModules-1,
         BQ_REG_COMCONFIG,
-        pui8RegData,
-        2);
+        2,
+        pui8RegData);
 
     // Turn off the low side of the differential interface on
     // the device on the bottom of the stack. See Section 1.2.6 of
@@ -446,33 +448,139 @@ bool bq76_autoAddress(uint32_t ui32nModules) {
         BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
         0,
         BQ_REG_COMCONFIG,
-        pui8RegData,
-        2);
+        2,
+        pui8RegData);
 
     // Clear all faults on each device, starting from the top down.
     // See Section 1.2.6 of the software developer's manual for
     // reference on these data values
     pui8RegData[0] = 0xFF;
     pui8RegData[1] = 0xC0;
-    for(int i=0; i<BQ_NUM_MODULES; i++) {
+    for(int i=0; i<BQ_MAX_NUM_MODULE; i++) {
         bq76_writeReg(
             BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
             i,
             BQ_REG_FAULT_SUM,
-            pui8RegData,
-            2);
+            2,
+            pui8RegData);
     }
 
     // At this point the devices should be ready to go with further
     // configuration
-    return 1;
+    return true;
+}
+
+
+/**
+ * Tries to start running a cell voltage sample with response on the
+ * BQ76 stack. Will Configure the sampling channels, and send a
+ * broadcast write request, using the current BQ configurations.
+ * will return true if sampling is started, false otherwise
+ */
+bool bq76_StartCellVoltageSample(tConf *psConf) {
+    if(g_bCmdInProgress)
+        return false;
+
+    bool bALlGood = true;
+
+    // Set the cells to sample on each device. Broadcast a read all
+    // channels select, then on the last one, round it out to the correct
+    // number of cells
+    uint32_t ui32SampleConf = 0xFFFF0000;
+    bALlGood = bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+        0,
+        BQ_REG_CHANNELS,
+        4,
+        (uint8_t *)&ui32SampleConf);
+
+    // Determine the mask for the last module
+    uint32_t ui32nCellsLast = psConf->ui32nCells % BQ_MAX_SAMPLE;
+    ui32SampleConf = 0;
+    for(int i=0; i<ui32nCellsLast; i++)
+        ui32SampleConf |= 1 << (i+16);
+
+    bALlGood = bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_SGL_NORESP,
+        psConf->ui32NumBQModules-1,
+        BQ_REG_CHANNELS,
+        4,
+        (uint8_t *)&ui32SampleConf);
+
+    if(!bALlGood)
+        return false;
+
+    // Send the broadcast cell sample command on all devices
+    uint8_t ui8Data = BQ_CMD_SAMPLE | (psConf->ui32NumBQModules & 0xF);
+    bALlGood = bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_RESP,
+        0,
+        BQ_REG_CMD,
+        1,
+        &ui8Data);
+
+    return bALlGood;
 }
 
 
 
 
+/**
+ * Tries to start running a thermo voltage sample with response on the
+ * BQ76 stack. Will Configure the sampling channels, and send a
+ * broadcast write request, using the current BQ configurations.
+ * will return true if sampling is started, false otherwise
+ */
+bool bq76_startThermoSample(tConf *psConf, bool bMuxState) {
+    if(g_bCmdInProgress)
+        return false;
+
+    bool bALlGood = true;
+
+    // Set the channels to sample on each device
+    uint32_t  ui32SampleConf = 0xFF00;
+
+    bALlGood = bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+        0,
+        BQ_REG_CHANNELS,
+        4,
+        (uint8_t *)&ui32SampleConf);
+
+    if(!bALlGood)
+        return false;
+
+    // Send the broadcast cell sample command on all devices
+    uint8_t ui8Data = BQ_CMD_SAMPLE | (psConf->ui32NumBQModules & 0xF);
+    bALlGood = bq76_writeReg(
+        BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_RESP,
+        0,
+        BQ_REG_CMD,
+        1,
+        &ui8Data);
+
+    if(bALlGood)
+        g_sSampleType = bMuxState ? THERM2 : THERM1;
+    else
+        g_sSampleType = NONE;
+
+    return bALlGood;
+}
 
 
+bool bq76_setCellVoltageThreshold(float fUnder, float fOver) {
 
+    // The registers are adjacent, can do it in one write
+    uint16_t pui16Conf[2];
+    pui16Conf[0] = BQ_VOLTS_TO_ADC(fUnder);
+    pui16Conf[1] = BQ_VOLTS_TO_ADC(fOver);
+
+    return bq76_writeReg(
+            BQ_FRM_TYPE_COMMAND | BQ_REQ_TYPE_BC_NORESP,
+            0,
+            BQ_REG_CELL_UV,
+            4,
+            (uint8_t *)pui16Conf);
+}
 
 

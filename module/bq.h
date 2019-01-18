@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "types.h"
+
 #define BQ_MAX_SAMPLE           16 // Maximum number of samples per module in a single read
 #define BQ_MAX_NUM_MODULE       16
 
@@ -46,11 +48,14 @@
 // Addresses of commonly used registers. If you need to write to it and it
 // isn't listed here, add it!
 #define BQ_REG_CMD              0x02
+#define BQ_REG_CHANNELS         0x03
 #define BQ_REG_ADDR             0x0A
 #define BQ_REG_DEV_CTRL         0x0C
 #define BQ_REG_DEVCONFIG        0x0E
 #define BQ_REG_COMCONFIG        0x10
 #define BQ_REG_FAULT_SUM        0x52
+#define BQ_REG_CELL_UV          0x8E
+#define BQ_REG_CELL_OV          0x90
 
 
 // Command Register Commands
@@ -95,9 +100,9 @@
 #define BQ_ADC_VMAX             5.0
 #define BQ_ADC_TO_VOLTS(x)      ((BQ_ADC_VMAX/65536.0) * ((float)(x)))
 #define BQ_ADC_TO_VOLT_FRAC(x)  ((1.0/65536.0) * ((float)(x)))
-
+#define BQ_VOLTS_TO_ADC(x)      (((uint16_t)(x * (16384.0 / BQ_ADC_VMAX))) << 2)
 // Macro to determine the expected timeout on a command
-#define BQ_WRITE_TIMEOUT          (g_bCmdHasResponse ? BQ_WRITE_RESP_TIMEOUT : BQ_WRITE_NORESP_TIMEOUT)
+#define BQ_WRITE_TIMEOUT        (g_bCmdHasResponse ? BQ_WRITE_RESP_TIMEOUT : BQ_WRITE_NORESP_TIMEOUT)
 
 
 // Defines the type of BQ asynchronous sample being performed
@@ -120,11 +125,6 @@ bool bq76_connect();
 // modules found and addressed. The highest address will be 1 1 the value
 // returned.
 bool bq76_autoAddress(uint32_t ui32nModules);
-
-
-// Applies all of the configuration data to the BQ76 stack. Returns true on
-// success
-bool bq76_applyConfig(tConf *psConfig);
 
 
 /*
@@ -173,29 +173,19 @@ bool bq76_parseMultiple(
 /*
  * High Level Configuration
  */
-uint8_t bq76_setCellVoltageThreshold(
-        uint8_t ui8ReqType,
-        uint8_t ui8Addr,
-        float fUnder,
-        float fOver);
-
-uint8_t bq76_setOversampling(
-        uint8_t ui8ReqType,
-        uint8_t ui8Addr,
-        bool bCollateSamples,
-        uint8_t ui8Count);
-
-uint8_t bq76_setCellsPopulated(uint8_t ui8Addr, uint16_t ui16CellMask);
-
+bool bq76_setCellVoltageThreshold(float fUnder, float fOver);
+bool bq76_setOversampling(bool bCollateSamples, uint8_t ui8Count);
+//bool bq76_setInitialSamplingDelay(uint32_t ui32Conf);
+//bool bq76_setSamplingPeriod(uint32_t ui32Conf);
 
 /*
  * High Level Functionality
  */
 
-uint8_t bq76_StartCellVoltageSample();
-uint8_t bq76_startThermoSample(bool bMuxState);
+bool bq76_StartCellVoltageSample(tConf *psConf);
+bool bq76_startThermoSample(tConf *psConf, bool bMuxState);
 
-uint8_t bq76_waitSampleDone(uint32_t ui32Timeout);
+bool bq76_waitSampleDone(uint32_t ui32Timeout);
 
 // If a sample sequence is running, checks the BQ76 stack to see if the sample
 // is complete, and returns true if it is complete on all modules. If one or

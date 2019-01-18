@@ -2,16 +2,13 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 
-SHELL = cmd.exe
-
-CG_TOOL_ROOT := C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS
+CG_TOOL_ROOT := /opt/ccstudio/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS
 
 GEN_OPTS__FLAG := 
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
 "./tm4c1230h6pm_startup_ccs.obj" \
-"./tm4c123gh6pm_startup_ccs.obj" \
 "./module/bq.obj" \
 "./module/bq76.obj" \
 "./module/iocontrol.obj" \
@@ -19,14 +16,13 @@ ORDERED_OBJS += \
 "./module/sys.obj" \
 "./module/system.obj" \
 "../tm4c1230h6pm.cmd" \
-"../tm4c123gh6pm.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibc.a \
 
 -include ../makefile.init
 
-RM := DEL /F
-RMDIR := RMDIR /S/Q
+RM := rm -rf
+RMDIR := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
@@ -150,22 +146,22 @@ all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 2020BMSFirmware.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power="1,2,3,4,5.2,5.3,7,9,10,12" --advice:power_severity=warning --define=ccs="ccs" --define=PART_TM4C1230H6PM -g --c99 --float_operations_allowed=32 --gcc --printf_support=full --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"2020BMSFirmware.map" --heap_size=0 --stack_size=512 -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="2020BMSFirmware_linkInfo.xml" --rom_model -o "2020BMSFirmware.out" $(ORDERED_OBJS)
+	"/opt/ccstudio/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --define=ccs="ccs" --define=PART_TM4C1230H6PM -g --c99 --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"2020BMSFirmware.map" --heap_size=0 --stack_size=512 -i"/opt/ccstudio/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/lib" -i"/opt/ccstudio/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="2020BMSFirmware_linkInfo.xml" --rom_model -o "2020BMSFirmware.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
 2020BMSFirmware.hex: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: ARM Hex Utility'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.1.LTS/bin/armhex"  -o "2020BMSFirmware.hex" $(EXE_OUTPUTS__QUOTED)
+	"/opt/ccstudio/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/bin/armhex"  -o "2020BMSFirmware.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "tm4c1230h6pm_startup_ccs.obj" "tm4c123gh6pm_startup_ccs.obj" "module\bq.obj" "module\bq76.obj" "module\iocontrol.obj" "module\main.obj" "module\sys.obj" "module\system.obj" 
-	-$(RM) "tm4c1230h6pm_startup_ccs.d" "tm4c123gh6pm_startup_ccs.d" "module\bq.d" "module\bq76.d" "module\iocontrol.d" "module\main.d" "module\sys.d" "module\system.d" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.obj" "module/bq.obj" "module/bq76.obj" "module/iocontrol.obj" "module/main.obj" "module/sys.obj" "module/system.obj" 
+	-$(RM) "tm4c1230h6pm_startup_ccs.d" "module/bq.d" "module/bq76.d" "module/iocontrol.d" "module/main.d" "module/sys.d" "module/system.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
